@@ -53,23 +53,77 @@ def load_all():
     return ids, features
 
 
-def clustering(path=None, label_col='label'):
-    """Write a Kaggle-style sample_submission.csv: id + a predicted cluster
-    label for every id, so the file has the exact columns and row count a
-    real submission must have.
+class KMeansFromScratch:
+    """K-means clustering algorithm implemented purely in NumPy (no sklearn.cluster)."""
+    def __init__(self, k=9, max_iter=300, n_init=20, seed=0):
+        self.k = k
+        self.max_iter = max_iter
+        self.n_init = n_init
+        self.seed = seed
+        self.centroids = None
+        self.labels = None
+        self.inertia_ = None
 
-    TODO: replace the placeholder below with your own clustering algorithm
-    (e.g. k-means) over `features`. Currently every id is assigned to the
-    same cluster (0), which is just a valid-format placeholder.
-    """
+    def _init_centroids_kmeans_pp(self, X, rng):
+        n_samples, n_features = X.shape
+        centroids = np.zeros((self.k, n_features))
+        centroids[0] = X[rng.choice(n_samples)]
+        
+        for i in range(1, self.k):
+            dists = np.min([np.sum((X - c)**2, axis=1) for c in centroids[:i]], axis=0)
+            probs = dists / (np.sum(dists) + 1e-10)
+            cumprobs = np.cumsum(probs)
+            r = rng.random()
+            next_idx = np.searchsorted(cumprobs, r)
+            next_idx = min(next_idx, n_samples - 1)
+            centroids[i] = X[next_idx]
+        return centroids
+
+    def fit_predict(self, X):
+        best_inertia = float('inf')
+        best_labels = None
+        best_centroids = None
+
+        for init_idx in range(self.n_init):
+            rng = np.random.RandomState(self.seed + init_idx)
+            centroids = self._init_centroids_kmeans_pp(X, rng)
+            
+            for iteration in range(self.max_iter):
+                # Distance matrix of shape (n_samples, k)
+                dists = np.linalg.norm(X[:, np.newaxis, :] - centroids[np.newaxis, :, :], axis=2)
+                labels = np.argmin(dists, axis=1)
+                
+                new_centroids = np.array([
+                    X[labels == j].mean(axis=0) if np.sum(labels == j) > 0 else centroids[j]
+                    for j in range(self.k)
+                ])
+                
+                if np.allclose(centroids, new_centroids):
+                    break
+                centroids = new_centroids
+            
+            dists = np.min([np.sum((X - centroids[j])**2, axis=1) for j in range(self.k)], axis=0)
+            inertia = np.sum(dists)
+            
+            if inertia < best_inertia:
+                best_inertia = inertia
+                best_labels = labels
+                best_centroids = centroids
+                
+        self.inertia_ = best_inertia
+        self.labels = best_labels
+        self.centroids = best_centroids
+        return best_labels
+
+
+def clustering(path=None, label_col='label', k=9, seed=0):
+    """Perform K-means clustering on features.npy with K=9 and save predictions."""
     path = path or DATA_DIR / 'sample_submission.csv'
-    ids = list(range(load_features().shape[0]))
-    labels = [0] * len(ids)  
+    features = load_features()
+    ids = list(range(features.shape[0]))
 
-    # ===================================================
-    # TODO: replace with your predicted cluster labels
-    # ===================================================
-
+    kmeans = KMeansFromScratch(k=k, n_init=20, seed=seed)
+    labels = kmeans.fit_predict(features)
 
     df = pd.DataFrame({'id': ids, label_col: labels})
     df.to_csv(path, index=False)
@@ -80,5 +134,13 @@ if __name__ == '__main__':
     ids, features = load_all()
     print(f'{len(ids)} pals, feature dim = {features.shape[1]}')
 
-    out_path = clustering()
-    print(f'wrote {out_path}')
+    out_path = clustering(k=9, seed=0)
+    print(f'Wrote predictions to {out_path}')
+
+    try:
+        from scoring import score_submission
+        scores = score_submission(out_path)
+        print(f"Silhouette Score (K=9): {scores['silhouette']:.4f} (Baseline: > 0.06)")
+    except Exception as e:
+        print(f"Scoring error: {e}")
+
