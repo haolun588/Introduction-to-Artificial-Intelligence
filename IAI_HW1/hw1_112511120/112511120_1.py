@@ -101,21 +101,4 @@ def clustering(path=None, label_col='label', k=9, seed=0):
 
 
 if __name__ == '__main__':
-    ids, features = load_all()
-    print(f'{len(ids)} pals, feature dim = {features.shape[1]}')
-
-    out_path = clustering(k=9, seed=0)
-    print(f'Wrote predictions to {out_path}')
-
-    try:
-        scoring_path = DATA_DIR / 'scoring.py'
-        if not scoring_path.exists() and (DATA_DIR.parent / 'scoring.py').exists():
-            scoring_path = DATA_DIR.parent / 'scoring.py'
-        if scoring_path.exists():
-            import sys
-            sys.path.append(str(scoring_path.parent))
-            from scoring import score_submission
-            scores = score_submission(out_path)
-            print(f"Silhouette Score (K=9): {scores['silhouette']:.4f} (Baseline: > 0.06)")
-    except Exception as e:
-        print(f"Scoring info: {e}")
+    clustering(k=9, seed=0)
