@@ -1,0 +1,4 @@
+# Verified with Python 3.12; tokenizer-only EDA does not require PyTorch.
+transformers==4.57.3
+tokenizers==0.22.2
+huggingface-hub==0.36.2

@@ -1,0 +1,5 @@
+# Install the CUDA PyTorch wheel first; see README.
+torch==2.9.1
+-r requirements-eda.txt
+scikit-learn==1.7.2
+matplotlib==3.10.8

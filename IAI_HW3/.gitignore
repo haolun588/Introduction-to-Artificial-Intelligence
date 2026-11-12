@@ -1,0 +1,5 @@
+__pycache__/
+.venv/
+/outputs/
+/saved_models/checkpoint/*
+!/saved_models/checkpoint/.gitkeep
