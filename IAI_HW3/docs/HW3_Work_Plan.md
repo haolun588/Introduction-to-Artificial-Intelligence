@@ -42,6 +42,8 @@
 
 ## 2. Data Preprocessing
 
+**2026/11/13 已完成 URL 正規化對照**：沿用加權設定，URL 統一為 `http`；最佳第 2 輪驗證 Macro-F1 91.28%，低於保留原 URL 的 92.65%，本次不採用。結果見 [URL_Normalization_Report.md](URL_Normalization_Report.md)。使用者回報 URL 正規化 Kaggle 0.8977，低於原加權模型 0.9049。保留原加權模型，下一項比較學習率 1e-5；其他設定不變。
+
 基準先做自訂的空白正規化，保留否定詞、標點、hashtag 字詞、原始 URL 與 emoji。訓練、驗證、推論共用同一前處理及設定。
 
 | 改動 | 對照及保留依據 |
@@ -51,6 +53,8 @@
 | Mention 或 hashtag 處理 | EDA 顯示有明確重複模式時再試，且保留 hashtag 的字詞內容作第一個對照。 |
 
 ## 3. Class Imbalance Handling
+
+**2026/11/13 已完成第一個加權 CE 對照**：反平方根權重的第 3 輪入選，驗證 Macro-F1 92.65%，相較基準 91.57% 提升 1.08 個百分點；neutral F1 由 84.73% 升至 86.47%。模型、曲線與 1,000 筆預測位於 `outputs/weighted_sqrt/`，詳見 [Weighted_CE_Report.md](Weighted_CE_Report.md)。使用者回報基準 Kaggle 0.8973、加權模型 0.9049，提升 0.76 個百分點。下一項比較 URL 正規化。
 
 先用未加權 cross-entropy 建立基準。若混淆矩陣顯示 neutral 或 positive 常被預測成 negative，第一個正式改進試驗採 weighted cross-entropy。權重由訓練集頻數計算，可先試較溫和的反頻率平方根。若有必要，再用 balanced sampling 做獨立對照，驗證集維持原始分布。
 

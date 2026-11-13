@@ -27,7 +27,7 @@ python -m venv .venv
 
 已實作自訂 PyTorch 訓練／驗證迴圈及離線 checkpoint 推論。安裝環境與下載指定基底模型（在本目錄執行）：
 
-RTX 3050 Laptop 的 GPU 短跑與完整 3 epochs 基準皆已完成。最佳為第 3 輪，固定驗證集 Macro-F1 **91.57%**；詳見 [完整基準報告](docs/Baseline_Report.md)與 [短跑報告](docs/Baseline_Smoke_Report.md)。最佳模型位於 `saved_models/checkpoint/`，1,000 筆預測位於 `outputs/baseline/predictions.csv`，尚未提交 Kaggle。完整環境已保存於 `requirements-lock.txt`；重建同版本環境時，先安裝下列 CUDA wheel，再用 `-r requirements-lock.txt` 取代 `-r requirements.txt`。
+RTX 3050 Laptop 的 GPU 短跑與完整 3 epochs 基準皆已完成。最佳為第 3 輪，固定驗證集 Macro-F1 **91.57%**；詳見 [完整基準報告](docs/Baseline_Report.md)與 [短跑報告](docs/Baseline_Smoke_Report.md)。最佳模型位於 `saved_models/checkpoint/`，1,000 筆預測位於 `outputs/baseline/predictions.csv`；使用者已提交並回報 Kaggle **0.8973**。完整環境已保存於 `requirements-lock.txt`；重建同版本環境時，先安裝下列 CUDA wheel，再用 `-r requirements-lock.txt` 取代 `-r requirements.txt`。
 
 ```powershell
 .venv/Scripts/python.exe -m pip install torch==2.9.1 --index-url https://download.pytorch.org/whl/cu126
@@ -60,9 +60,33 @@ CUDA 套件安裝方式依 [PyTorch 官方版本表](https://pytorch.org/get-sta
 
 為保留實驗結果，程式拒絕覆寫非空的實驗／checkpoint 目錄與既有預測檔。重新實驗時同時指定新路徑，例如 `--output-dir outputs/baseline_seed43 --checkpoint saved_models/baseline_seed43 --seed 43`。`--seed` 只影響訓練，仍共用既有 `--split`。
 
-推論依 checkpoint 設定做相同前處理與 tokenization，依工作計畫的提交規格輸出 `id,pred` 並保留 `benchmark.csv` 原始 ID 順序。執行程式需一併保留 `eda.py`、`training.py` 及 requirements 檔案。
+推論依 checkpoint 設定做相同前處理與 tokenization，依工作計畫的提交規格輸出 `id,pred` 並保留 `benchmark.csv` 原始 ID 順序。執行程式需一併保留 `eda.py`、`training.py`、`preprocessing.py` 及 requirements 檔案。
 
 訓練完成後將入選 checkpoint 放在 `saved_models/checkpoint/`。交件目錄名稱及 ZIP 檔名使用 `HW3_{student_id}`，並依講義納入資料、checkpoint、可執行程式與所需檔案。
+
+## 加權 loss 對照實驗
+
+2026/11/13 已完成，最佳驗證 Macro-F1 **92.65%**（基準 91.57%，提升 1.08 個百分點）。報告見 [加權 CE 對照](docs/Weighted_CE_Report.md)，可提交檔案為 `outputs/weighted_sqrt/predictions.csv`；使用者已回報此版本 Kaggle **0.9049**（基準 0.8973，提升 0.76 個百分點）。基準模型仍留在 `saved_models/checkpoint/`，加權模型位於下列獨立路徑。以下為本輪使用的指令，重跑需改新路徑。
+
+```powershell
+.venv/Scripts/python.exe main.py train --device cuda --class-weighting sqrt-inverse --output-dir outputs/weighted_sqrt --checkpoint outputs/weighted_sqrt/checkpoint
+.venv/Scripts/python.exe main.py predict --device cuda --checkpoint outputs/weighted_sqrt/checkpoint --predictions outputs/weighted_sqrt/predictions.csv
+```
+
+權重只使用本次訓練樣本的類別頻數：先取 `1/sqrt(n_class)`，再正規化，使訓練樣本的平均權重為 1。固定完整切分的 negative／neutral／positive 權重約為 0.740353／1.616846／1.637426。
+
+訓練目標為加權 CE 總和除以梯度累積窗口的實際樣本數；不是各 micro-batch 分別使用 weighted mean。此做法保留類別權重效果，且最後不足一個窗口仍正確縮放。權重與計算規則保存於 run config 及 checkpoint 設定。每輪圖表中的 train／validation loss 均維持未加權 CE，方便與基準比較；模型仍以未改分布的 validation Macro-F1 選取。預設 `--class-weighting none` 保留未加權行為。API 語義參考 [PyTorch CrossEntropyLoss](https://docs.pytorch.org/docs/2.9/generated/torch.nn.CrossEntropyLoss.html)。
+
+## URL 正規化對照
+
+2026/11/13 已完成：最佳驗證 Macro-F1 **91.28%**，低於原加權模型 **92.65%**，因此保留原加權版本，未採用 URL 正規化。詳見 [URL 對照報告](docs/URL_Normalization_Report.md)。使用者已回報本輪 Kaggle **0.8977**，低於原加權模型 0.9049；本輪模型與預測保留作實驗紀錄。
+
+```powershell
+.venv/Scripts/python.exe main.py train --device cuda --class-weighting sqrt-inverse --preprocessing url-http-v1 --output-dir outputs/weighted_url --checkpoint outputs/weighted_url/checkpoint
+.venv/Scripts/python.exe main.py predict --device cuda --checkpoint outputs/weighted_url/checkpoint --predictions outputs/weighted_url/predictions.csv
+```
+
+以上路徑已有結果，重跑須改用新路徑。預設前處理仍是 `whitespace-v1`；`url-http-v1` 將 URL 換成 `http` 並正規化空白。推論自動讀取 checkpoint 的前處理版本。完整測試指令為 `.venv/Scripts/python.exe -m unittest test_eda.py test_training.py test_preprocessing.py`；tokenizer 整合測試需要先執行 `prepare`。
 
 ## Kaggle 提交格式
 

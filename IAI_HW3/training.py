@@ -19,6 +19,7 @@ from torch.utils.data import DataLoader, Dataset
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, get_linear_schedule_with_warmup
 
 from eda import LABELS, MODEL, REVISION, preprocess
+from preprocessing import MODES, prepare_text
 
 ROOT = Path(__file__).resolve().parent
 PREPROCESSING = "whitespace-v1"
@@ -74,9 +75,9 @@ def smoke_subset(rows, seed, per_class=16):
 
 
 class TextDataset(Dataset):
-    def __init__(self, rows, tokenizer, max_length, labeled=True):
+    def __init__(self, rows, tokenizer, max_length, labeled=True, preprocessing=PREPROCESSING):
         self.rows = rows
-        self.encoded = tokenizer([preprocess(r["text"]) for r in rows],
+        self.encoded = tokenizer([prepare_text(r["text"], preprocessing) for r in rows],
                                  truncation=True, max_length=max_length, padding=False)
         self.labeled = labeled
 
@@ -90,9 +91,9 @@ class TextDataset(Dataset):
         return item
 
 
-def loader(rows, tokenizer, max_length, batch_size, shuffle=False, seed=42, labeled=True):
+def loader(rows, tokenizer, max_length, batch_size, shuffle=False, seed=42, labeled=True, preprocessing=PREPROCESSING):
     from transformers import DataCollatorWithPadding
-    return DataLoader(TextDataset(rows, tokenizer, max_length, labeled), batch_size=batch_size,
+    return DataLoader(TextDataset(rows, tokenizer, max_length, labeled, preprocessing), batch_size=batch_size,
                       shuffle=shuffle, num_workers=0,
                       generator=torch.Generator().manual_seed(seed),
                       collate_fn=DataCollatorWithPadding(tokenizer, return_tensors="pt"))
@@ -129,6 +130,26 @@ def evaluate(model, batches, device, amp=False):
 def accumulation_sample_count(batch_index, batch_size, accumulation, dataset_size):
     start = (batch_index // accumulation) * accumulation * batch_size
     return min(accumulation * batch_size, dataset_size - start)
+
+
+def class_weights(rows, method):
+    """Train-only inverse-square-root weights, with mean sample weight one."""
+    if method == "none":
+        return None
+    if method != "sqrt-inverse":
+        raise ValueError(f"Unknown class weighting: {method}")
+    counts = torch.tensor([sum(r["label"] == label for r in rows) for label in LABELS], dtype=torch.float64)
+    if (counts <= 0).any():
+        raise ValueError("Class weighting requires every class in training data")
+    weights = counts.rsqrt()
+    weights /= (counts * weights).sum() / counts.sum()
+    return weights.float()
+
+
+def training_loss(logits, labels, weights, window_samples):
+    # Fixed sample normalization preserves class weighting even for micro-batch 1.
+    # Do not average separately by each micro-batch's sum of class weights.
+    return F.cross_entropy(logits.float(), labels, weight=weights, reduction="sum") / window_samples
 
 
 def plot_history(history, path):
@@ -169,6 +190,9 @@ def train(args):
     train_rows, val_rows, manifest = load_split(args.data_dir, args.split)
     if args.smoke:
         train_rows, val_rows = [smoke_subset(part, args.seed) for part in (train_rows, val_rows)]
+    weights = class_weights(train_rows, args.class_weighting)
+    if weights is not None:
+        weights = weights.to(device)
     epochs = 1 if args.smoke else args.epochs
     output.mkdir(parents=True, exist_ok=True)
     checkpoint.mkdir(parents=True, exist_ok=True)
@@ -179,17 +203,21 @@ def train(args):
     ).to(device)
     if not args.no_gradient_checkpointing:
         model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
-    train_batches = loader(train_rows, tokenizer, args.max_length, args.batch_size, True, args.seed)
-    train_eval = loader(train_rows, tokenizer, args.max_length, args.batch_size)
-    val_batches = loader(val_rows, tokenizer, args.max_length, args.batch_size)
+    train_batches = loader(train_rows, tokenizer, args.max_length, args.batch_size, True, args.seed, preprocessing=args.preprocessing)
+    train_eval = loader(train_rows, tokenizer, args.max_length, args.batch_size, preprocessing=args.preprocessing)
+    val_batches = loader(val_rows, tokenizer, args.max_length, args.batch_size, preprocessing=args.preprocessing)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=0.01, foreach=False)
     total_steps = epochs * math.ceil(len(train_batches) / args.accumulation_steps)
     scheduler = get_linear_schedule_with_warmup(optimizer, int(total_steps * args.warmup_ratio), total_steps)
     scaler = torch.amp.GradScaler("cuda", enabled=amp)
     config = {"model": MODEL, "revision": REVISION, "seed": args.seed, "labels": list(LABELS),
-              "preprocessing": PREPROCESSING, "max_length": args.max_length, "batch_size": args.batch_size,
+              "preprocessing": args.preprocessing, "max_length": args.max_length, "batch_size": args.batch_size,
               "accumulation_steps": args.accumulation_steps, "learning_rate": args.learning_rate,
               "weight_decay": 0.01, "warmup_ratio": args.warmup_ratio, "epochs": epochs,
+              "class_weighting": args.class_weighting,
+              "class_weights": weights.tolist() if weights is not None else None,
+              "loss_normalization": "weighted sum / actual accumulation-window sample count; train mean weight 1",
+              "evaluation_loss": "unweighted cross entropy for baseline comparison",
               "amp": amp, "gradient_checkpointing": not args.no_gradient_checkpointing,
               "smoke": args.smoke, "dataset_sha256": manifest["dataset_sha256"],
               "split_sha256": hashlib.sha256(args.split.read_bytes()).hexdigest(),
@@ -201,6 +229,7 @@ def train(args):
     write_json(output / "environment.json", environment)
     print(json.dumps(environment), flush=True)
     print(f"Train {len(train_rows)} / validation {len(val_rows)}; optimizer steps planned: {total_steps}", flush=True)
+    print(f"Class weights ({', '.join(LABELS)}): {config['class_weights']}", flush=True)
     best_f1, history, update_count = -1.0, [], 0
     started = time.perf_counter()
     for epoch in range(1, epochs + 1):
@@ -213,8 +242,8 @@ def train(args):
             with torch.autocast(device_type=device.type, dtype=torch.float16, enabled=amp):
                 logits = model(**batch).logits
                 # Normalize by actual samples, including the final partial accumulation window.
-                loss = F.cross_entropy(logits.float(), labels, reduction="sum") / accumulation_sample_count(
-                    index, args.batch_size, args.accumulation_steps, len(train_rows))
+                loss = training_loss(logits, labels, weights, accumulation_sample_count(
+                    index, args.batch_size, args.accumulation_steps, len(train_rows)))
             if not torch.isfinite(loss):
                 raise ValueError("Non-finite training loss")
             scaler.scale(loss).backward()
@@ -265,7 +294,7 @@ def train(args):
 
 def load_checkpoint(path, device):
     config = json.loads((path / "training_config.json").read_text(encoding="utf-8"))
-    if config["labels"] != list(LABELS) or config["preprocessing"] != PREPROCESSING:
+    if config["labels"] != list(LABELS) or config["preprocessing"] not in MODES:
         raise ValueError("Unsupported checkpoint label mapping or preprocessing")
     model = AutoModelForSequenceClassification.from_pretrained(path, local_files_only=True).to(device)
     if model.config.id2label != dict(enumerate(LABELS)):
@@ -286,7 +315,7 @@ def predict(args):
     device = choose_device(args.device)
     model, tokenizer, config = load_checkpoint(checkpoint, device)
     rows = read_rows(args.data_dir / "benchmark.csv", labeled=False)
-    batches = loader(rows, tokenizer, config["max_length"], args.batch_size, labeled=False)
+    batches = loader(rows, tokenizer, config["max_length"], args.batch_size, labeled=False, preprocessing=config["preprocessing"])
     predictions = []
     for batch in batches:
         logits = model(**{k: v.to(device) for k, v in batch.items()}).logits

@@ -7,10 +7,37 @@ from pathlib import Path
 
 import torch
 
-from training import accumulation_sample_count, load_split, metrics
+from training import accumulation_sample_count, class_weights, load_split, metrics, training_loss
 
 
 class TrainingTests(unittest.TestCase):
+    def test_class_weights_use_training_counts_and_mean_one(self):
+        rows = [{'label': label} for label, count in [('negative', 9), ('neutral', 4), ('positive', 1)] for _ in range(count)]
+        weights = class_weights(rows, 'sqrt-inverse')
+        torch.testing.assert_close(weights / weights[0], torch.tensor([1., 1.5, 3.]))
+        self.assertAlmostEqual(float((weights * torch.tensor([9, 4, 1])).sum() / 14), 1.0, places=6)
+        self.assertIsNone(class_weights(rows, 'none'))
+        with self.assertRaises(ValueError):
+            class_weights([{'label': 'negative'}], 'sqrt-inverse')
+
+    def test_weighted_gradients_match_full_windows_including_partial_batch(self):
+        torch.manual_seed(42)
+        targets = torch.tensor([0, 0, 1, 2, 0, 1, 2, 2, 0, 1, 2])
+        weights = torch.tensor([0.7, 1.5, 1.6])
+        expected = torch.randn(11, 3, requires_grad=True)
+        actual = expected.detach().clone().requires_grad_(True)
+        for start in (0, 6):
+            end = min(start+6, 11)
+            log_probs = expected[start:end].log_softmax(-1)
+            loss = -(log_probs[torch.arange(end-start), targets[start:end]] * weights[targets[start:end]]).sum() / (end-start)
+            loss.backward()
+        for index, start in enumerate(range(0, 11, 2)):
+            training_loss(actual[start:start+2], targets[start:start+2], weights,
+                          accumulation_sample_count(index, 2, 3, 11)).backward()
+        torch.testing.assert_close(actual.grad, expected.grad)
+        plain = training_loss(actual, targets, None, len(targets))
+        torch.testing.assert_close(plain, torch.nn.functional.cross_entropy(actual, targets))
+
     def test_accumulation_matches_large_batch_with_partial_window(self):
         torch.manual_seed(7)
         inputs, targets = torch.randn(11, 4), torch.randn(11, 2)

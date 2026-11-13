@@ -49,6 +49,9 @@ def main() -> None:
     parser.add_argument("--batch-size", type=int, default=2)
     parser.add_argument("--accumulation-steps", type=int, default=8)
     parser.add_argument("--learning-rate", type=float, default=2e-5)
+    parser.add_argument("--class-weighting", choices=["none", "sqrt-inverse"], default="none")
+    from preprocessing import MODES
+    parser.add_argument("--preprocessing", choices=MODES, default="whitespace-v1")
     parser.add_argument("--warmup-ratio", type=float, default=0.1)
     parser.add_argument("--max-length", type=int, default=64)
     parser.add_argument("--no-amp", action="store_true")

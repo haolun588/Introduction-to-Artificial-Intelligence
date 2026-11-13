@@ -1,6 +1,6 @@
 # 完整 BERT 基準實驗
 
-2026/11/12 完成。最佳模型為第 3 epoch，固定 900 筆驗證集 Macro-F1 **0.915715（91.57%）**。這是本機驗證結果，尚未提交 Kaggle，不代表 benchmark 成績。
+2026/11/12 完成。最佳模型為第 3 epoch，固定 900 筆驗證集 Macro-F1 **0.915715（91.57%）**。使用者已回報此輪 Kaggle 分數 **0.8973（89.73%）**，比本機驗證低約 1.84 個百分點；此分數來自使用者回報，未由工具登入平台核驗。
 
 ## 設定
 
@@ -48,7 +48,7 @@
 - `outputs/baseline/predictions.csv` 已輸出全部 1,000 筆 benchmark 推論，欄位 `id,pred`、ID 唯一性、原始列順序與標籤合法性皆通過檢查。
 - 預測分布：negative 734、neutral 125、positive 141。無 benchmark 真實標籤，無法在本機計算其分數。
 - `outputs/baseline/` 保存 history、summary、環境、run config、split 副本及 `prediction_check.json`；檢查紀錄含預測檔與 checkpoint 的 SHA-256。
-- 尚未上傳 Kaggle／E3；輸出及模型目錄由 Git 忽略，交件時須另外納入。
+- 使用者已提交 Kaggle 並回報 0.8973；E3 提交狀態未確認。輸出及模型目錄由 Git 忽略，交件時須另外納入。
 
 ## 判讀與下一項工作
 
