@@ -18,10 +18,11 @@ from sklearn.metrics import classification_report, confusion_matrix
 from torch.utils.data import DataLoader, Dataset
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, get_linear_schedule_with_warmup
 
-from eda import LABELS, MODEL, REVISION, preprocess
-from preprocessing import MODES, prepare_text
+from .eda import LABELS, preprocess
+from .preprocessing import MODES, prepare_text
+from .model_source import file_sha256, verify_base_model
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 PREPROCESSING = "whitespace-v1"
 
 
@@ -178,6 +179,11 @@ def train(args):
     checkpoint = args.checkpoint or (output / "checkpoint" if args.smoke else ROOT / "saved_models/checkpoint")
     if (output.exists() and any(output.iterdir())) or (checkpoint.exists() and any(p.name != ".gitkeep" for p in checkpoint.iterdir())):
         raise ValueError("Run/checkpoint directory already contains files; choose new paths")
+    # Fail closed before touching CUDA, loading weights, or creating run directories.
+    base_source = verify_base_model(args.base_model)
+    code_hashes = {name: file_sha256(ROOT / name) for name in
+                   ("main.py", "src/__init__.py", "src/training.py", "src/eda.py",
+                    "src/preprocessing.py", "src/model_source.py")}
     device = choose_device(args.device)
     amp = device.type == "cuda" and not args.no_amp
     random.seed(args.seed)
@@ -196,9 +202,11 @@ def train(args):
     epochs = 1 if args.smoke else args.epochs
     output.mkdir(parents=True, exist_ok=True)
     checkpoint.mkdir(parents=True, exist_ok=True)
-    tokenizer = AutoTokenizer.from_pretrained(args.base_model, local_files_only=True)
+    tokenizer = AutoTokenizer.from_pretrained(base_source["directory"], local_files_only=True,
+                                              trust_remote_code=False)
     model = AutoModelForSequenceClassification.from_pretrained(
-        args.base_model, local_files_only=True, num_labels=3,
+        base_source["directory"], local_files_only=True, use_safetensors=True,
+        trust_remote_code=False, num_labels=3,
         id2label=dict(enumerate(LABELS)), label2id={label: i for i, label in enumerate(LABELS)},
     ).to(device)
     if not args.no_gradient_checkpointing:
@@ -210,7 +218,9 @@ def train(args):
     total_steps = epochs * math.ceil(len(train_batches) / args.accumulation_steps)
     scheduler = get_linear_schedule_with_warmup(optimizer, int(total_steps * args.warmup_ratio), total_steps)
     scaler = torch.amp.GradScaler("cuda", enabled=amp)
-    config = {"model": MODEL, "revision": REVISION, "seed": args.seed, "labels": list(LABELS),
+    config = {"model": base_source["model"], "revision": base_source["revision"],
+              "base_model_source": base_source, "training_code_sha256": code_hashes,
+              "seed": args.seed, "labels": list(LABELS),
               "preprocessing": args.preprocessing, "max_length": args.max_length, "batch_size": args.batch_size,
               "accumulation_steps": args.accumulation_steps, "learning_rate": args.learning_rate,
               "weight_decay": 0.01, "warmup_ratio": args.warmup_ratio, "epochs": epochs,

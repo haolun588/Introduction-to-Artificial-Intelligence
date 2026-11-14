@@ -1,3 +1,5 @@
+> 歷史實驗報告；內文的「下一步」代表當時判斷。 現況以 [實驗總表](../Experiment_Results.md) 與 [最新計畫](../Target_92_Plan.md) 為準。指令的工作目錄為 HW3 根目錄。
+
 # BERT 基準流程短跑紀錄
 
 日期：2026/11/12。狀態：訓練、儲存、重載、推論流程已通過；尚未執行完整基準訓練。
@@ -6,7 +8,7 @@
 
 - Python 3.12.10，PyTorch 2.9.1+cu126，CUDA runtime 12.6。
 - NVIDIA GeForce RTX 3050 Laptop GPU，4 GB。
-- Transformers 4.57.3；完整環境版本見 `requirements-lock.txt`。
+- Transformers 4.57.3；完整環境版本見 `requirements/lock.txt`。
 - 指定基底 `google-bert/bert-base-uncased`，revision `86b5e0934494bd15c9632b12f734a8a67f723594`。
 - 固定 EDA 切分內每類抽 16 筆，訓練／驗證各 48 筆，seed 42。
 - 1 epoch，max length 64，micro-batch 2，累積 8，有效 batch 16。

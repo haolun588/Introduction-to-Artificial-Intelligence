@@ -2,12 +2,12 @@ import csv
 import unittest
 from pathlib import Path
 
-from eda import grouped_split, preprocess
+from src.eda import grouped_split, preprocess
 
 
 class SplitTests(unittest.TestCase):
     def test_actual_data_partition_and_reproducibility(self):
-        with (Path(__file__).parent / "dataset/dataset.csv").open(encoding="utf-8-sig", newline="") as f:
+        with (Path(__file__).resolve().parents[1] / "dataset/dataset.csv").open(encoding="utf-8-sig", newline="") as f:
             rows = list(csv.DictReader(f))
         train, validation = grouped_split(rows)
         self.assertEqual((len(train), len(validation)), (8100, 900))

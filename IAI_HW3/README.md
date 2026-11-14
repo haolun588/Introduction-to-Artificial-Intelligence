@@ -1,100 +1,134 @@
 # IAI HW3｜Sentiment Analysis
 
-在此目錄執行資料盤點。需 Python 3.10 以上，盤點使用標準函式庫。
+**所有 HW3 工作開始前，先閱讀並遵守 [最高優先工作規範 AGENTS.md](AGENTS.md)；完成後須通過其中的收尾檢核表。**
 
-```powershell
-python main.py inspect
+使用指定的 `google-bert/bert-base-uncased` 微調三分類模型。**先看 [實驗總表](docs/Experiment_Results.md)，下一步依 [92% 改進計畫](docs/Target_92_Plan.md)。** 文件整理於 2026/11/14；歷史報告集中在 `docs/reports/`。
+
+## 目前狀態
+
+| 用途 | 版本 | 已知結果 |
+|---|---|---|
+| 驗證比較基準 | `outputs/weighted_sqrt/checkpoint/` | 固定驗證 Macro-F1 92.65% |
+| Kaggle 單模型候選 | `outputs/weighted_lr3e5/checkpoint/` | 使用者回報 0.9052 |
+| 目前預設 checkpoint | `saved_models/checkpoint/` | **早期 baseline，尚未替換成交件版本** |
+
+已完成 7 個完整訓練、2 組集成。Emoji 對照有 CSV，Kaggle 分數待回報。92% 是 Kaggle 目標；驗證分數超過 92% 不代表達標。最終交件版本尚未指定，尚未完成乾淨解壓推論演練。
+
+## 目錄與閱讀入口
+
+```text
+IAI_HW3/
+  AGENTS.md                       工作前必讀規範與收尾檢核表
+  main.py                         inspect / eda / prepare / verify-base / train / predict
+  requirements.txt                作業指定的依賴入口，轉入 requirements/train.txt
+  src/                            核心程式套件
+    training.py, eda.py, preprocessing.py
+    model_source.py               指定基底的固定雜湊與離線驗證
+  tools/                          分析與維護工具
+    analyze_ensemble.py, audit_emoji.py, refresh_experiments.py
+  tests/                          切分、訓練、前處理與來源驗證測試
+    test_*.py
+  requirements/                   依賴清單
+    train.txt, eda.txt, lock.txt
+  dataset/                        課程原始資料
+  docs/
+    README.md                     文件索引
+    Experiment_Results.md         自動產生的實驗總表
+    Target_92_Plan.md              最新方向、預算與停止條件
+    HW3_Work_Plan.md               課程要求與交件清單
+    reports/                      各輪實驗證據
+    archive/                      整理前的長文快照
+    HW3.pdf                       原始講義
+  experiments/
+    registry.json                 實驗登錄、Kaggle 回報與候選角色
+    snapshot.json                 可追溯的指標、設定與檔案雜湊
+  outputs/                        本機切分、基底模型、實驗產物（不進 Git）
+  saved_models/checkpoint/         目前仍為 baseline（權重不進 Git）
+  .venv/                          本機 Python 環境（不進 Git）
 ```
 
-`dataset/` 內已有課程提供的 `dataset.csv` 與 `benchmark.csv`，講義位於 `docs/HW3.pdf`。如果從補充包建立工作區，將補充包內容解壓至既有 `IAI_HW3` 根目錄。實驗順序、分工及交件規格見 [HW3_Work_Plan.md](docs/HW3_Work_Plan.md)。
+原模型及輸出路徑保留，以維持已保存設定與重現指令的相容性。更多文件見 [文件索引](docs/README.md)。
 
-第一項 EDA 已完成。從本目錄執行：
+2026/11/14 已將 13 個檔案分類至上述資料夾。`main.py` 與 `requirements.txt` 保留在根目錄以符合交件結構；核心程式以 `src` 套件匯入，不需額外安裝專案。`src/` 內的模組透過 `main.py` 使用；分析工具改用下列 `-m tools...` 指令。
+
+## 日常使用
+
+以下指令都從 `IAI_HW3` 目錄執行；若目前在 repository 根目錄，先執行 `Set-Location IAI_HW3`。
+
+```powershell
+# 資料盤點、現有測試、實驗索引完整性（不啟動訓練）
+.venv/Scripts/python.exe main.py inspect
+.venv/Scripts/python.exe -m unittest discover -p "test_*.py"
+.venv/Scripts/python.exe tools/refresh_experiments.py --check
+```
+
+分析工具的說明入口（不執行分析／推論）：
+
+```powershell
+.venv/Scripts/python.exe -m tools.analyze_ensemble --help
+.venv/Scripts/python.exe -m tools.audit_emoji --help
+```
+
+需要用目前 Kaggle 候選重新推論時，**明確指定 checkpoint**；預測檔必須使用尚不存在的路徑：
+
+```powershell
+.venv/Scripts/python.exe main.py predict --device cuda --checkpoint outputs/weighted_lr3e5/checkpoint --predictions outputs/review_lr3e5/predictions.csv
+```
+
+已有可用 CSV 是 `outputs/weighted_lr3e5/predictions.csv`。提交格式固定為 `id,pred`，依 `dataset/benchmark.csv` 原始 ID 順序輸出 1,000 筆；標籤限 `negative`、`neutral`、`positive`。程式拒絕覆寫既有 CSV 及非空訓練目錄。
+
+新對照以新的 run ID 同時指定輸出及 checkpoint，以下只是操作範例，尚未執行：
+
+```powershell
+.venv/Scripts/python.exe main.py train --device cuda --class-weighting sqrt-inverse --learning-rate 2e-5 --output-dir outputs/weighted_control_v2 --checkpoint outputs/weighted_control_v2/checkpoint
+```
+
+此範例仍為現有的每 epoch 評估；計畫中的每半輪評估、分層學習率、較溫和權重及 FGSM 尚未實作。
+
+## 環境與固定切分
+
+本機已完成安裝與模型下載。只在新環境執行下列步驟；訓練環境已以 Python 3.12 驗證：
 
 ```powershell
 python -m venv .venv
-.venv/Scripts/python.exe -m pip install -r requirements-eda.txt
-.venv/Scripts/python.exe main.py eda
-.venv/Scripts/python.exe -m unittest test_eda.py
-```
-
-第一次需要網路下載 tokenizer，之後使用 `outputs/eda/tokenizer/` 的本機副本。EDA 不需下載 BERT 模型權重或安裝 PyTorch；已以 Python 3.12 驗證。
-
-預設 seed 42，依類別及空白正規化後的文字群組切分為 8,100／900 筆，避免重複文字跨集合。`outputs/eda/split.json` 保存 ID、類別數、seed 與資料 SHA-256；`train.csv`、`validation.csv` 保留原始文字。後續實驗應載入這份切分，不重新切分。若資料或切分參數改變，程式拒絕覆蓋既有切分，請用新的 `--output-dir`。
-
-報告見 `outputs/eda/EDA_Report.md`，細部統計及 token 範例見 `outputs/eda/eda.json`。統計只使用訓練集；P50／P90／P95 為 31／40／43，建議 `max_length=64`（截斷率 0.02%），訓練時採批內動態 padding。基準前處理共用 `eda.preprocess`，只正規化空白。Emoji 偵測使用近似 Unicode 範圍，非完整 emoji 辨識。
-
-## BERT 基準訓練與推論
-
-已實作自訂 PyTorch 訓練／驗證迴圈及離線 checkpoint 推論。安裝環境與下載指定基底模型（在本目錄執行）：
-
-RTX 3050 Laptop 的 GPU 短跑與完整 3 epochs 基準皆已完成。最佳為第 3 輪，固定驗證集 Macro-F1 **91.57%**；詳見 [完整基準報告](docs/Baseline_Report.md)與 [短跑報告](docs/Baseline_Smoke_Report.md)。最佳模型位於 `saved_models/checkpoint/`，1,000 筆預測位於 `outputs/baseline/predictions.csv`；使用者已提交並回報 Kaggle **0.8973**。完整環境已保存於 `requirements-lock.txt`；重建同版本環境時，先安裝下列 CUDA wheel，再用 `-r requirements-lock.txt` 取代 `-r requirements.txt`。
-
-```powershell
 .venv/Scripts/python.exe -m pip install torch==2.9.1 --index-url https://download.pytorch.org/whl/cu126
-.venv/Scripts/python.exe -m pip install -r requirements.txt
+.venv/Scripts/python.exe -m pip install -r requirements/lock.txt
 .venv/Scripts/python.exe main.py prepare
+.venv/Scripts/python.exe main.py eda
 ```
 
-CUDA 套件安裝方式依 [PyTorch 官方版本表](https://pytorch.org/get-started/previous-versions/)。沒有 NVIDIA GPU 可改用 CPU wheel 的 `https://download.pytorch.org/whl/cpu`。`prepare` 只下載指定 revision 的 `google-bert/bert-base-uncased`；後續訓練與推論只讀本機檔案。
+一般安裝仍用 `-r requirements.txt`，會載入 `requirements/train.txt` 及 `requirements/eda.txt`；`requirements/lock.txt` 保留完整已驗證版本。沒有 NVIDIA GPU 可使用 CPU wheel 與 `--device cpu`。`prepare` 下載指定 revision；其後訓練與推論使用本機檔案。只做 EDA 可安裝 `requirements/eda.txt`，不需 PyTorch 或 BERT 權重。
 
-先執行短跑與程式測試：
+`prepare` 下載後與每次 `train` 開始前，會依 `src/model_source.py` 內固定的官方版本雜湊，核對 5 個基底檔案。可單獨離線檢查，不載入模型或使用 GPU：
 
 ```powershell
-.venv/Scripts/python.exe -m unittest test_eda.py test_training.py
-.venv/Scripts/python.exe main.py train --smoke --device cuda
-.venv/Scripts/python.exe main.py predict --device cuda --checkpoint outputs/smoke/checkpoint --predictions outputs/smoke/predictions.csv
+.venv/Scripts/python.exe main.py verify-base
 ```
 
-短跑從固定切分的每一類各抽 16 筆，train／validation 各 48 筆，只跑 1 epoch，用於驗證 forward／backward、儲存、重載與推論。其 F1 不代表完整驗證集表現，預測檔不應提交 Kaggle。短跑預設保存在 `outputs/smoke/`，不會寫入交件 checkpoint。
+`--base-model` 仍可指向同一份已核對檔案的其他本機副本；須包含 `config.json`、`model.safetensors`、`tokenizer.json`、`tokenizer_config.json`、`vocab.txt`，除此之外只允許 `.cache/`。缺檔、雜湊不符或多出 tokenizer／adapter 等檔案，會在 GPU 初始化及建立實驗目錄前被拒絕。請用 `prepare --base-model <新的空目錄>` 重新準備，不修改白名單來接受未知模型。
 
-完整基準指令（本機已完成此輪，重跑須指定新 output／checkpoint／predictions 路徑）：
+新訓練的 `run_config.json` 與 checkpoint 的 `training_config.json` 會保存 `base_model_source`（實際路徑、revision、各檔案大小與 SHA-256）及 `training_code_sha256`。舊 checkpoint 繼續可推論，但不會追補為已完成歷史來源驗證。交件時務必保留完整 `src/`（含 `__init__.py`）與 `requirements/`；修正與驗證範圍見 [合規稽核報告](docs/Compliance_Audit.md)。
+
+固定切分位於 `outputs/eda/split.json`：seed 42、8,100／900 筆，按空白正規化文字分組並分層，保存 ID 與資料 SHA-256。後續訓練共用此切分；`train --seed` 只影響訓練。EDA 不相容的資料／參數會被拒絕覆寫，須指定新 `--output-dir`。訓練集長度 P50／P90／P95 = 31／40／43；`max_length=64` 截斷率約 0.02%，採批內動態 padding。
+
+預設訓練為 3 epochs、batch 2／累積 8、AdamW 2e-5、weight decay 0.01、10% warmup／linear decay、未加權 CE。CUDA 預設 FP16 AMP 與梯度檢查點；正式單模型推論目前為 FP32，跨精度差異仍待實測。已完成的加權對照使用 `--class-weighting sqrt-inverse`。
+
+短跑使用每類各 16 筆、1 epoch；其 CSV 不作正式提交：
 
 ```powershell
-.venv/Scripts/python.exe main.py train --device cuda
-.venv/Scripts/python.exe main.py predict --device cuda --predictions outputs/baseline/predictions.csv
+.venv/Scripts/python.exe main.py train --smoke --device cuda --output-dir outputs/smoke_new --checkpoint outputs/smoke_new/checkpoint
+.venv/Scripts/python.exe main.py predict --device cuda --checkpoint outputs/smoke_new/checkpoint --predictions outputs/smoke_new/predictions.csv
 ```
 
-預設 max length 64、micro-batch 2、梯度累積 8（有效 batch 16）、AdamW 2e-5、weight decay 0.01、10% linear warmup／decay、3 epochs、未加權 cross-entropy。CUDA 預設啟用 FP16 AMP 與梯度檢查點；可用 `--no-amp`、`--no-gradient-checkpointing` 關閉。最後不足一個累積窗口時依實際樣本數縮放 loss；scheduler 只在成功更新 optimizer 後前進。
+## 實驗紀錄維護
 
-每 epoch 結束後以當時模型的 eval 模式評估 train／validation，記錄 loss、Macro-F1、各類 precision／recall／F1 與混淆矩陣。`outputs/baseline/` 保存 `history.json`、`curves.png`、`run_config.json`、`environment.json`、固定切分副本及 `summary.json`。依 validation Macro-F1 選最佳模型，存入 `saved_models/checkpoint/`，並重新載入核對驗證 loss 與混淆矩陣。設定檔保存類別順序、前處理、長度、seed、實際樣本 ID 與資料／切分雜湊；相同 seed 不保證跨 GPU／套件版本位元一致。
-
-為保留實驗結果，程式拒絕覆寫非空的實驗／checkpoint 目錄與既有預測檔。重新實驗時同時指定新路徑，例如 `--output-dir outputs/baseline_seed43 --checkpoint saved_models/baseline_seed43 --seed 43`。`--seed` 只影響訓練，仍共用既有 `--split`。
-
-推論依 checkpoint 設定做相同前處理與 tokenization，依工作計畫的提交規格輸出 `id,pred` 並保留 `benchmark.csv` 原始 ID 順序。執行程式需一併保留 `eda.py`、`training.py`、`preprocessing.py` 及 requirements 檔案。
-
-訓練完成後將入選 checkpoint 放在 `saved_models/checkpoint/`。交件目錄名稱及 ZIP 檔名使用 `HW3_{student_id}`，並依講義納入資料、checkpoint、可執行程式與所需檔案。
-
-## 加權 loss 對照實驗
-
-2026/11/13 已完成，最佳驗證 Macro-F1 **92.65%**（基準 91.57%，提升 1.08 個百分點）。報告見 [加權 CE 對照](docs/Weighted_CE_Report.md)，可提交檔案為 `outputs/weighted_sqrt/predictions.csv`；使用者已回報此版本 Kaggle **0.9049**（基準 0.8973，提升 0.76 個百分點）。基準模型仍留在 `saved_models/checkpoint/`，加權模型位於下列獨立路徑。以下為本輪使用的指令，重跑需改新路徑。
+每個完整實驗使用獨立的 `outputs/<run_id>/`，將報告放入 `docs/reports/`，在 `experiments/registry.json` 登錄路徑與使用者回報的 Kaggle 分數；未知分數維持 `null`。然後執行：
 
 ```powershell
-.venv/Scripts/python.exe main.py train --device cuda --class-weighting sqrt-inverse --output-dir outputs/weighted_sqrt --checkpoint outputs/weighted_sqrt/checkpoint
-.venv/Scripts/python.exe main.py predict --device cuda --checkpoint outputs/weighted_sqrt/checkpoint --predictions outputs/weighted_sqrt/predictions.csv
+.venv/Scripts/python.exe tools/refresh_experiments.py
+.venv/Scripts/python.exe tools/refresh_experiments.py --check
 ```
 
-權重只使用本次訓練樣本的類別頻數：先取 `1/sqrt(n_class)`，再正規化，使訓練樣本的平均權重為 1。固定完整切分的 negative／neutral／positive 權重約為 0.740353／1.616846／1.637426。
+工具核對既有 metadata、固定切分、混淆矩陣／Macro-F1、完整 checkpoint 檔案雜湊與 CSV 格式，不重新訓練或推論。`snapshot.json` 中目前程式碼的 hash 僅標示盤點時版本，不能證明歷史訓練使用了相同程式碼。只更新 registry 再重建總表，避免在多份文件重複維護完整分數。
 
-訓練目標為加權 CE 總和除以梯度累積窗口的實際樣本數；不是各 micro-batch 分別使用 weighted mean。此做法保留類別權重效果，且最後不足一個窗口仍正確縮放。權重與計算規則保存於 run config 及 checkpoint 設定。每輪圖表中的 train／validation loss 均維持未加權 CE，方便與基準比較；模型仍以未改分布的 validation Macro-F1 選取。預設 `--class-weighting none` 保留未加權行為。API 語義參考 [PyTorch CrossEntropyLoss](https://docs.pytorch.org/docs/2.9/generated/torch.nn.CrossEntropyLoss.html)。
-
-## URL 正規化對照
-
-2026/11/13 已完成：最佳驗證 Macro-F1 **91.28%**，低於原加權模型 **92.65%**，因此保留原加權版本，未採用 URL 正規化。詳見 [URL 對照報告](docs/URL_Normalization_Report.md)。使用者已回報本輪 Kaggle **0.8977**，低於原加權模型 0.9049；本輪模型與預測保留作實驗紀錄。
-
-```powershell
-.venv/Scripts/python.exe main.py train --device cuda --class-weighting sqrt-inverse --preprocessing url-http-v1 --output-dir outputs/weighted_url --checkpoint outputs/weighted_url/checkpoint
-.venv/Scripts/python.exe main.py predict --device cuda --checkpoint outputs/weighted_url/checkpoint --predictions outputs/weighted_url/predictions.csv
-```
-
-以上路徑已有結果，重跑須改用新路徑。預設前處理仍是 `whitespace-v1`；`url-http-v1` 將 URL 換成 `http` 並正規化空白。推論自動讀取 checkpoint 的前處理版本。完整測試指令為 `.venv/Scripts/python.exe -m unittest test_eda.py test_training.py test_preprocessing.py`；tokenizer 整合測試需要先執行 `prepare`。
-
-## Kaggle 提交格式
-
-提交 CSV 的首列固定為 `id,pred`。依 `dataset/benchmark.csv` 的列順序保留原始 `id`，每個 ID 恰好輸出一筆預測，共 1,000 筆。`pred` 使用小寫類別名稱 `positive`、`neutral` 或 `negative`。
-
-```csv
-id,pred
-0,positive
-1,positive
-2,neutral
-```
+Git 只保存程式、資料、文件、登錄及輕量 snapshot。權重、輸出和 `.venv` 約占 8 GiB，本次完整保留；另行備份模型與 CSV，Git 並不包含它們。交件封裝依 [課程要求與清單](docs/HW3_Work_Plan.md)，不要直接壓縮整個開發工作區。

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import torch
 
-from training import accumulation_sample_count, class_weights, load_split, metrics, training_loss
+from src.training import accumulation_sample_count, class_weights, load_split, metrics, training_loss
 
 
 class TrainingTests(unittest.TestCase):

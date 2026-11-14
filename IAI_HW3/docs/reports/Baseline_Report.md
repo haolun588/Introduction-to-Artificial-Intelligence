@@ -1,3 +1,5 @@
+> 歷史實驗報告；內文的「下一步」代表當時判斷。 現況以 [實驗總表](../Experiment_Results.md) 與 [最新計畫](../Target_92_Plan.md) 為準。指令的工作目錄為 HW3 根目錄。
+
 # 完整 BERT 基準實驗
 
 2026/11/12 完成。最佳模型為第 3 epoch，固定 900 筆驗證集 Macro-F1 **0.915715（91.57%）**。使用者已回報此輪 Kaggle 分數 **0.8973（89.73%）**，比本機驗證低約 1.84 個百分點；此分數來自使用者回報，未由工具登入平台核驗。
@@ -8,7 +10,7 @@
 - 沿用 EDA 固定切分，train 8,100／validation 900，seed 42；相同正規化文字不跨集合。
 - 空白正規化，max length 64，動態 padding，micro-batch 2，梯度累積 8，有效 batch 16。
 - AdamW、learning rate 2e-5、weight decay 0.01、10% linear warmup／decay、未加權 cross-entropy、3 epochs。
-- RTX 3050 Laptop 4 GB；FP16 AMP、梯度檢查點。Python 3.12.10、PyTorch 2.9.1+cu126；其餘版本見 `requirements-lock.txt`。
+- RTX 3050 Laptop 4 GB；FP16 AMP、梯度檢查點。Python 3.12.10、PyTorch 2.9.1+cu126；其餘版本見 `requirements/lock.txt`。
 - 訓練僅使用指定訓練切分；benchmark 只在選好模型後做推論。
 
 ## 每輪結果

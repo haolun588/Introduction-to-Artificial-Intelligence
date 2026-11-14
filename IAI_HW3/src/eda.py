@@ -9,9 +9,9 @@ import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from .model_source import MODEL, REVISION
+
 LABELS = ("negative", "neutral", "positive")
-MODEL = "google-bert/bert-base-uncased"
-REVISION = "86b5e0934494bd15c9632b12f734a8a67f723594"
 PATTERNS = {
     "url": r"https?://|www\.",
     "hashtag": r"#\w+",

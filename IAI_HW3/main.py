@@ -2,6 +2,7 @@
 
 import argparse
 import csv
+import json
 from collections import Counter
 from pathlib import Path
 
@@ -35,7 +36,7 @@ def inspect_dataset(path: Path, expected_fields: set[str]) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["inspect", "eda", "prepare", "train", "predict"])
+    parser.add_argument("command", choices=["inspect", "eda", "prepare", "verify-base", "train", "predict"])
     parser.add_argument("--data-dir", type=Path, default=ROOT / "dataset")
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--seed", type=int, default=42)
@@ -50,7 +51,7 @@ def main() -> None:
     parser.add_argument("--accumulation-steps", type=int, default=8)
     parser.add_argument("--learning-rate", type=float, default=2e-5)
     parser.add_argument("--class-weighting", choices=["none", "sqrt-inverse"], default="none")
-    from preprocessing import MODES
+    from src.preprocessing import MODES
     parser.add_argument("--preprocessing", choices=MODES, default="whitespace-v1")
     parser.add_argument("--warmup-ratio", type=float, default=0.1)
     parser.add_argument("--max-length", type=int, default=64)
@@ -64,20 +65,24 @@ def main() -> None:
             inspect_dataset(args.data_dir / "dataset.csv", {"id", "text", "label"})
             inspect_dataset(args.data_dir / "benchmark.csv", {"id", "text"})
         if args.command == "eda":
-            from eda import run_eda
+            from src.eda import run_eda
             run_eda(args.data_dir, args.output_dir or ROOT / "outputs/eda", args.seed, args.validation_fraction)
         elif args.command == "train":
-            from training import train
+            from src.training import train
             train(args)
         elif args.command == "predict":
-            from training import predict
+            from src.training import predict
             predict(args)
+        elif args.command == "verify-base":
+            from src.model_source import verify_base_model
+            print(json.dumps(verify_base_model(args.base_model), indent=2))
         elif args.command == "prepare":
             from huggingface_hub import snapshot_download
-            from eda import MODEL, REVISION
+            from src.model_source import MODEL, REVISION, APPROVED_FILES, verify_base_model
             snapshot_download(MODEL, revision=REVISION, local_dir=args.base_model,
-                              allow_patterns=["config.json", "model.safetensors", "tokenizer.json", "tokenizer_config.json", "vocab.txt"])
-            print(f"Base model ready: {args.base_model}")
+                              allow_patterns=list(APPROVED_FILES))
+            verified = verify_base_model(args.base_model)
+            print(f"Base model verified: {verified['directory']}")
     except (OSError, ValueError) as exc:
         parser.exit(1, f"{exc}\n")
 

@@ -1,0 +1,1181 @@
+{
+  "schema_version": 1,
+  "reviewed_on": "2026-11-14",
+  "roles": {
+    "validation_reference": "weighted_sqrt",
+    "kaggle_candidate": "weighted_lr3e5",
+    "release_candidate": null
+  },
+  "score_provenance": "Historical user reports preserved in the linked reports; not independently verified on Kaggle. null means unknown.",
+  "registry_sha256": "9d10601a89725350e73df5de1c80ef636aaf8974407dc9bf6848d1ffa2e7ec52",
+  "dataset_sha256": "aa410190a8facb5510bf853cb6f41acec5d374e568ec804192a2b212a419a55d",
+  "benchmark_sha256": "1d9969750b41a7b9e2a7eeea4c7798ad8200adcbb5f652ee2353fcdc9777e4a2",
+  "split_sha256": "c5a8afb4e92c8a24b2ac246f03fdc5046d00570b4320700425bb1c3587f9c308",
+  "train_rows": 8100,
+  "validation_rows": 900,
+  "audit_scope": "File/metadata/CSV checks only; no model inference or platform verification. Current code hashes do not establish original training code provenance.",
+  "current_code_sha256": {
+    "main.py": "4fa22e8ff53410b886f449acc1be8d4fb72ff86688f59d34aa78156b5c4fe623",
+    "src/__init__.py": "ee25363184124b0bb11e75541158ce31f7d9024ae158b6bde612b7e2b718a93b",
+    "src/training.py": "b5c8f6a6a85b175b4f70220374e4755de58be8603ab6fbd37cad0ba6e0abfae8",
+    "src/eda.py": "1060df149ac43885edbca5cc4274916508b5dc34ed836c797c2a029e2871385c",
+    "src/preprocessing.py": "695f0be4b4ff61cdf23e5ea2ad6110a2c7fbb0a3340cff4ac8c04318a020e356",
+    "src/model_source.py": "afe5f5fff1b4dd99f9a47b00c03051d11a1c22897bc72bd8f1f199426fbe05ab",
+    "tools/__init__.py": "a95a53b4ae731c56c5e476e34fcf1a462d1c41f7a602052c3c25cf144238eae0",
+    "tools/analyze_ensemble.py": "71e6554c5001277c96c64ac5481f69b95f3d86a57f35945fa66a2e12a63567bc",
+    "tools/audit_emoji.py": "fad8ac67f0a62abbbcbdb34a19cdfbe4b959aba268e25bdd65f3407621885f4b",
+    "requirements.txt": "0a39d7bfedad701c31314a0f52ef8b2deb3e6d27212d58ccdca08f817c3f323f",
+    "requirements/train.txt": "7c0978bb20dbd1f139d521b99b055661f7dcfc41b040d6f2e540735fab63ceb7",
+    "requirements/eda.txt": "ca41f6c6308bc3a53b1af2ba304faa793bf0b5eb5399c0253f36c26fcc4dbcb3",
+    "requirements/lock.txt": "792515ce7e96dc1c2ca462594691343cc4132d12231b315df863bbc118853d56"
+  },
+  "checkpoints": {
+    "saved_models/checkpoint": {
+      "files_sha256": {
+        "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+        "training_config.json": "b458687a0debc36156856789b08127e8575200091deac8fba7b8fc9efb837531",
+        "model.safetensors": "a8a12dcf436684c05b356a220fd824e7aff1dc269f92f567064f939374ea537d",
+        "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+        "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+        "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+        "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+      },
+      "config": {
+        "model": "google-bert/bert-base-uncased",
+        "revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+        "seed": 42,
+        "labels": [
+          "negative",
+          "neutral",
+          "positive"
+        ],
+        "preprocessing": "whitespace-v1",
+        "max_length": 64,
+        "batch_size": 2,
+        "accumulation_steps": 8,
+        "learning_rate": 2e-05,
+        "weight_decay": 0.01,
+        "warmup_ratio": 0.1,
+        "epochs": 3,
+        "amp": true,
+        "gradient_checkpointing": true,
+        "smoke": false,
+        "dataset_sha256": "aa410190a8facb5510bf853cb6f41acec5d374e568ec804192a2b212a419a55d",
+        "split_sha256": "c5a8afb4e92c8a24b2ac246f03fdc5046d00570b4320700425bb1c3587f9c308",
+        "best_epoch": 3,
+        "validation": {
+          "loss": 0.26941878550918774,
+          "macro_f1": 0.9157154596184066,
+          "classes": {
+            "negative": {
+              "precision": 0.9582689335394127,
+              "recall": 0.9748427672955975,
+              "f1-score": 0.9664848012470771,
+              "support": 636.0
+            },
+            "neutral": {
+              "precision": 0.8671875,
+              "recall": 0.8283582089552238,
+              "f1-score": 0.8473282442748091,
+              "support": 134.0
+            },
+            "positive": {
+              "precision": 0.952,
+              "recall": 0.9153846153846154,
+              "f1-score": 0.9333333333333333,
+              "support": 130.0
+            }
+          },
+          "confusion_matrix": [
+            [
+              620,
+              13,
+              3
+            ],
+            [
+              20,
+              111,
+              3
+            ],
+            [
+              7,
+              4,
+              119
+            ]
+          ]
+        }
+      }
+    },
+    "outputs/weighted_sqrt/checkpoint": {
+      "files_sha256": {
+        "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+        "training_config.json": "f270a1da26ecca4e2f3d4c1b6488dd9dfd276ad3dd46d786fd71d91697d83faa",
+        "model.safetensors": "e03e0bafe1209e66b5dd7e58a0e79633cf820b55dd51f21c934cbcdb649e8d07",
+        "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+        "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+        "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+        "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+      },
+      "config": {
+        "model": "google-bert/bert-base-uncased",
+        "revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+        "seed": 42,
+        "labels": [
+          "negative",
+          "neutral",
+          "positive"
+        ],
+        "preprocessing": "whitespace-v1",
+        "max_length": 64,
+        "batch_size": 2,
+        "accumulation_steps": 8,
+        "learning_rate": 2e-05,
+        "weight_decay": 0.01,
+        "warmup_ratio": 0.1,
+        "epochs": 3,
+        "class_weighting": "sqrt-inverse",
+        "class_weights": [
+          0.7403528690338135,
+          1.6168463230133057,
+          1.637426495552063
+        ],
+        "loss_normalization": "weighted sum / actual accumulation-window sample count; train mean weight 1",
+        "evaluation_loss": "unweighted cross entropy for baseline comparison",
+        "amp": true,
+        "gradient_checkpointing": true,
+        "smoke": false,
+        "dataset_sha256": "aa410190a8facb5510bf853cb6f41acec5d374e568ec804192a2b212a419a55d",
+        "split_sha256": "c5a8afb4e92c8a24b2ac246f03fdc5046d00570b4320700425bb1c3587f9c308",
+        "best_epoch": 3,
+        "validation": {
+          "loss": 0.26116083352981756,
+          "macro_f1": 0.9264883043107858,
+          "classes": {
+            "negative": {
+              "precision": 0.9628482972136223,
+              "recall": 0.9779874213836478,
+              "f1-score": 0.9703588143525741,
+              "support": 636.0
+            },
+            "neutral": {
+              "precision": 0.8712121212121212,
+              "recall": 0.8582089552238806,
+              "f1-score": 0.8646616541353384,
+              "support": 134.0
+            },
+            "positive": {
+              "precision": 0.9754098360655737,
+              "recall": 0.9153846153846154,
+              "f1-score": 0.9444444444444444,
+              "support": 130.0
+            }
+          },
+          "confusion_matrix": [
+            [
+              622,
+              12,
+              2
+            ],
+            [
+              18,
+              115,
+              1
+            ],
+            [
+              6,
+              5,
+              119
+            ]
+          ]
+        }
+      }
+    },
+    "outputs/weighted_url/checkpoint": {
+      "files_sha256": {
+        "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+        "training_config.json": "5731926cc8c5345cc743d494c392c909eac5c3227f999e2307dd41fa6115372b",
+        "model.safetensors": "c83602a6f08375a6f3b406d060fd84354027a7265b56843988372f36c55807a2",
+        "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+        "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+        "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+        "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+      },
+      "config": {
+        "model": "google-bert/bert-base-uncased",
+        "revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+        "seed": 42,
+        "labels": [
+          "negative",
+          "neutral",
+          "positive"
+        ],
+        "preprocessing": "url-http-v1",
+        "max_length": 64,
+        "batch_size": 2,
+        "accumulation_steps": 8,
+        "learning_rate": 2e-05,
+        "weight_decay": 0.01,
+        "warmup_ratio": 0.1,
+        "epochs": 3,
+        "class_weighting": "sqrt-inverse",
+        "class_weights": [
+          0.7403528690338135,
+          1.6168463230133057,
+          1.637426495552063
+        ],
+        "loss_normalization": "weighted sum / actual accumulation-window sample count; train mean weight 1",
+        "evaluation_loss": "unweighted cross entropy for baseline comparison",
+        "amp": true,
+        "gradient_checkpointing": true,
+        "smoke": false,
+        "dataset_sha256": "aa410190a8facb5510bf853cb6f41acec5d374e568ec804192a2b212a419a55d",
+        "split_sha256": "c5a8afb4e92c8a24b2ac246f03fdc5046d00570b4320700425bb1c3587f9c308",
+        "best_epoch": 2,
+        "validation": {
+          "loss": 0.2309531929473289,
+          "macro_f1": 0.9128294633680992,
+          "classes": {
+            "negative": {
+              "precision": 0.9580093312597201,
+              "recall": 0.9685534591194969,
+              "f1-score": 0.9632525410476935,
+              "support": 636.0
+            },
+            "neutral": {
+              "precision": 0.8473282442748091,
+              "recall": 0.8283582089552238,
+              "f1-score": 0.8377358490566038,
+              "support": 134.0
+            },
+            "positive": {
+              "precision": 0.9523809523809523,
+              "recall": 0.9230769230769231,
+              "f1-score": 0.9375,
+              "support": 130.0
+            }
+          },
+          "confusion_matrix": [
+            [
+              616,
+              16,
+              4
+            ],
+            [
+              21,
+              111,
+              2
+            ],
+            [
+              6,
+              4,
+              120
+            ]
+          ]
+        }
+      }
+    },
+    "outputs/weighted_lr1e5/checkpoint": {
+      "files_sha256": {
+        "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+        "training_config.json": "ba689d1e1fc47af53e8628e4ddf325e4fc43a4100d156061fbe57aa892fa3cea",
+        "model.safetensors": "43b804067a10a0947bf8a3c759e6eec9a92ff1dc223fdfc2bad70912173242f8",
+        "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+        "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+        "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+        "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+      },
+      "config": {
+        "model": "google-bert/bert-base-uncased",
+        "revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+        "seed": 42,
+        "labels": [
+          "negative",
+          "neutral",
+          "positive"
+        ],
+        "preprocessing": "whitespace-v1",
+        "max_length": 64,
+        "batch_size": 2,
+        "accumulation_steps": 8,
+        "learning_rate": 1e-05,
+        "weight_decay": 0.01,
+        "warmup_ratio": 0.1,
+        "epochs": 3,
+        "class_weighting": "sqrt-inverse",
+        "class_weights": [
+          0.7403528690338135,
+          1.6168463230133057,
+          1.637426495552063
+        ],
+        "loss_normalization": "weighted sum / actual accumulation-window sample count; train mean weight 1",
+        "evaluation_loss": "unweighted cross entropy for baseline comparison",
+        "amp": true,
+        "gradient_checkpointing": true,
+        "smoke": false,
+        "dataset_sha256": "aa410190a8facb5510bf853cb6f41acec5d374e568ec804192a2b212a419a55d",
+        "split_sha256": "c5a8afb4e92c8a24b2ac246f03fdc5046d00570b4320700425bb1c3587f9c308",
+        "best_epoch": 3,
+        "validation": {
+          "loss": 0.23609355334140775,
+          "macro_f1": 0.914628795568447,
+          "classes": {
+            "negative": {
+              "precision": 0.9595015576323987,
+              "recall": 0.9685534591194969,
+              "f1-score": 0.9640062597809077,
+              "support": 636.0
+            },
+            "neutral": {
+              "precision": 0.8507462686567164,
+              "recall": 0.8507462686567164,
+              "f1-score": 0.8507462686567164,
+              "support": 134.0
+            },
+            "positive": {
+              "precision": 0.9516129032258065,
+              "recall": 0.9076923076923077,
+              "f1-score": 0.9291338582677166,
+              "support": 130.0
+            }
+          },
+          "confusion_matrix": [
+            [
+              616,
+              16,
+              4
+            ],
+            [
+              18,
+              114,
+              2
+            ],
+            [
+              8,
+              4,
+              118
+            ]
+          ]
+        }
+      }
+    },
+    "outputs/weighted_lr3e5/checkpoint": {
+      "files_sha256": {
+        "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+        "training_config.json": "e009ff274353e177161fae37e2cffbbc3e3f87e73bf1d20b28c992a09168c8c7",
+        "model.safetensors": "07518d9f0c3072761ae5513aa93fcc4cacbbef291b9c5fa35610e6f90800af96",
+        "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+        "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+        "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+        "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+      },
+      "config": {
+        "model": "google-bert/bert-base-uncased",
+        "revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+        "seed": 42,
+        "labels": [
+          "negative",
+          "neutral",
+          "positive"
+        ],
+        "preprocessing": "whitespace-v1",
+        "max_length": 64,
+        "batch_size": 2,
+        "accumulation_steps": 8,
+        "learning_rate": 3e-05,
+        "weight_decay": 0.01,
+        "warmup_ratio": 0.1,
+        "epochs": 3,
+        "class_weighting": "sqrt-inverse",
+        "class_weights": [
+          0.7403528690338135,
+          1.6168463230133057,
+          1.637426495552063
+        ],
+        "loss_normalization": "weighted sum / actual accumulation-window sample count; train mean weight 1",
+        "evaluation_loss": "unweighted cross entropy for baseline comparison",
+        "amp": true,
+        "gradient_checkpointing": true,
+        "smoke": false,
+        "dataset_sha256": "aa410190a8facb5510bf853cb6f41acec5d374e568ec804192a2b212a419a55d",
+        "split_sha256": "c5a8afb4e92c8a24b2ac246f03fdc5046d00570b4320700425bb1c3587f9c308",
+        "best_epoch": 3,
+        "validation": {
+          "loss": 0.2751569959332442,
+          "macro_f1": 0.9210451968121104,
+          "classes": {
+            "negative": {
+              "precision": 0.9595645412130638,
+              "recall": 0.970125786163522,
+              "f1-score": 0.9648162627052385,
+              "support": 636.0
+            },
+            "neutral": {
+              "precision": 0.8636363636363636,
+              "recall": 0.8507462686567164,
+              "f1-score": 0.8571428571428571,
+              "support": 134.0
+            },
+            "positive": {
+              "precision": 0.96,
+              "recall": 0.9230769230769231,
+              "f1-score": 0.9411764705882353,
+              "support": 130.0
+            }
+          },
+          "confusion_matrix": [
+            [
+              617,
+              15,
+              4
+            ],
+            [
+              19,
+              114,
+              1
+            ],
+            [
+              7,
+              3,
+              120
+            ]
+          ]
+        }
+      }
+    },
+    "outputs/weighted_seed43/checkpoint": {
+      "files_sha256": {
+        "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+        "training_config.json": "d16509a8e7522dba11df34cab36fc4a49f580c64083a78cc631d9a80842265ee",
+        "model.safetensors": "c6785b0e061df2a66678c5b57766fdb0868d3621d712058a64aa8151a229798c",
+        "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+        "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+        "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+        "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+      },
+      "config": {
+        "model": "google-bert/bert-base-uncased",
+        "revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+        "seed": 43,
+        "labels": [
+          "negative",
+          "neutral",
+          "positive"
+        ],
+        "preprocessing": "whitespace-v1",
+        "max_length": 64,
+        "batch_size": 2,
+        "accumulation_steps": 8,
+        "learning_rate": 2e-05,
+        "weight_decay": 0.01,
+        "warmup_ratio": 0.1,
+        "epochs": 3,
+        "class_weighting": "sqrt-inverse",
+        "class_weights": [
+          0.7403528690338135,
+          1.6168463230133057,
+          1.637426495552063
+        ],
+        "loss_normalization": "weighted sum / actual accumulation-window sample count; train mean weight 1",
+        "evaluation_loss": "unweighted cross entropy for baseline comparison",
+        "amp": true,
+        "gradient_checkpointing": true,
+        "smoke": false,
+        "dataset_sha256": "aa410190a8facb5510bf853cb6f41acec5d374e568ec804192a2b212a419a55d",
+        "split_sha256": "c5a8afb4e92c8a24b2ac246f03fdc5046d00570b4320700425bb1c3587f9c308",
+        "best_epoch": 3,
+        "validation": {
+          "loss": 0.25431959883827304,
+          "macro_f1": 0.9133436140875185,
+          "classes": {
+            "negative": {
+              "precision": 0.9608763693270735,
+              "recall": 0.9654088050314465,
+              "f1-score": 0.9631372549019608,
+              "support": 636.0
+            },
+            "neutral": {
+              "precision": 0.8518518518518519,
+              "recall": 0.8582089552238806,
+              "f1-score": 0.8550185873605948,
+              "support": 134.0
+            },
+            "positive": {
+              "precision": 0.9365079365079365,
+              "recall": 0.9076923076923077,
+              "f1-score": 0.921875,
+              "support": 130.0
+            }
+          },
+          "confusion_matrix": [
+            [
+              614,
+              16,
+              6
+            ],
+            [
+              17,
+              115,
+              2
+            ],
+            [
+              8,
+              4,
+              118
+            ]
+          ]
+        }
+      }
+    },
+    "outputs/weighted_emoji/checkpoint": {
+      "files_sha256": {
+        "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+        "training_config.json": "660774b4b46bb6e1a35b2eb8c95421bd6f43dcf76a4173424bb07a268c31a82e",
+        "model.safetensors": "09ba4641fa67932e501b93be39f897f600b3e820b75ef1c3079cc3ab07f8f719",
+        "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+        "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+        "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+        "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+      },
+      "config": {
+        "model": "google-bert/bert-base-uncased",
+        "revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+        "seed": 42,
+        "labels": [
+          "negative",
+          "neutral",
+          "positive"
+        ],
+        "preprocessing": "emoji-short-v1",
+        "max_length": 64,
+        "batch_size": 2,
+        "accumulation_steps": 8,
+        "learning_rate": 2e-05,
+        "weight_decay": 0.01,
+        "warmup_ratio": 0.1,
+        "epochs": 3,
+        "class_weighting": "sqrt-inverse",
+        "class_weights": [
+          0.7403528690338135,
+          1.6168463230133057,
+          1.637426495552063
+        ],
+        "loss_normalization": "weighted sum / actual accumulation-window sample count; train mean weight 1",
+        "evaluation_loss": "unweighted cross entropy for baseline comparison",
+        "amp": true,
+        "gradient_checkpointing": true,
+        "smoke": false,
+        "dataset_sha256": "aa410190a8facb5510bf853cb6f41acec5d374e568ec804192a2b212a419a55d",
+        "split_sha256": "c5a8afb4e92c8a24b2ac246f03fdc5046d00570b4320700425bb1c3587f9c308",
+        "best_epoch": 3,
+        "validation": {
+          "loss": 0.27823414135905394,
+          "macro_f1": 0.9168356238066316,
+          "classes": {
+            "negative": {
+              "precision": 0.958204334365325,
+              "recall": 0.9732704402515723,
+              "f1-score": 0.9656786271450858,
+              "support": 636.0
+            },
+            "neutral": {
+              "precision": 0.8671875,
+              "recall": 0.8283582089552238,
+              "f1-score": 0.8473282442748091,
+              "support": 134.0
+            },
+            "positive": {
+              "precision": 0.9523809523809523,
+              "recall": 0.9230769230769231,
+              "f1-score": 0.9375,
+              "support": 130.0
+            }
+          },
+          "confusion_matrix": [
+            [
+              619,
+              14,
+              3
+            ],
+            [
+              20,
+              111,
+              3
+            ],
+            [
+              7,
+              3,
+              120
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "runs": [
+    {
+      "id": "baseline",
+      "name": "未加權基準",
+      "kind": "single",
+      "output": "outputs/baseline",
+      "checkpoints": [
+        "saved_models/checkpoint"
+      ],
+      "report": "docs/reports/Baseline_Report.md",
+      "kaggle_macro_f1": 0.8973,
+      "decision": "保留基準；預設 checkpoint 仍指向此版本",
+      "validation": {
+        "loss": 0.26941878550918774,
+        "macro_f1": 0.9157154596184066,
+        "classes": {
+          "negative": {
+            "precision": 0.9582689335394127,
+            "recall": 0.9748427672955975,
+            "f1-score": 0.9664848012470771,
+            "support": 636.0
+          },
+          "neutral": {
+            "precision": 0.8671875,
+            "recall": 0.8283582089552238,
+            "f1-score": 0.8473282442748091,
+            "support": 134.0
+          },
+          "positive": {
+            "precision": 0.952,
+            "recall": 0.9153846153846154,
+            "f1-score": 0.9333333333333333,
+            "support": 130.0
+          }
+        },
+        "confusion_matrix": [
+          [
+            620,
+            13,
+            3
+          ],
+          [
+            20,
+            111,
+            3
+          ],
+          [
+            7,
+            4,
+            119
+          ]
+        ]
+      },
+      "best_epoch": 3,
+      "training_seconds": 1181.936160899997,
+      "source_sha256": {
+        "outputs/baseline/summary.json": "9f94ee43398c6a0f840fb2b04d3a2a83fd07d1b5c3be942d578abf1db66ae799",
+        "outputs/baseline/run_config.json": "4420727749881d00c4820ccc2f707702990099102ed2a440f7b7b9927e8fe34d"
+      },
+      "predictions": "outputs/baseline/predictions.csv",
+      "predictions_sha256": "be202424f6c72629c559606ffbf72369a9bbc18abc8077db386438d432fba6fa",
+      "prediction_rows": 1000,
+      "different_predictions_from_kaggle_candidate": 16
+    },
+    {
+      "id": "weighted_sqrt",
+      "name": "加權 2e-5 / seed 42",
+      "kind": "single",
+      "output": "outputs/weighted_sqrt",
+      "checkpoints": [
+        "outputs/weighted_sqrt/checkpoint"
+      ],
+      "report": "docs/reports/Weighted_CE_Report.md",
+      "kaggle_macro_f1": 0.9049,
+      "decision": "驗證基準",
+      "validation": {
+        "loss": 0.26116083352981756,
+        "macro_f1": 0.9264883043107858,
+        "classes": {
+          "negative": {
+            "precision": 0.9628482972136223,
+            "recall": 0.9779874213836478,
+            "f1-score": 0.9703588143525741,
+            "support": 636.0
+          },
+          "neutral": {
+            "precision": 0.8712121212121212,
+            "recall": 0.8582089552238806,
+            "f1-score": 0.8646616541353384,
+            "support": 134.0
+          },
+          "positive": {
+            "precision": 0.9754098360655737,
+            "recall": 0.9153846153846154,
+            "f1-score": 0.9444444444444444,
+            "support": 130.0
+          }
+        },
+        "confusion_matrix": [
+          [
+            622,
+            12,
+            2
+          ],
+          [
+            18,
+            115,
+            1
+          ],
+          [
+            6,
+            5,
+            119
+          ]
+        ]
+      },
+      "best_epoch": 3,
+      "training_seconds": 1217.5856073999894,
+      "source_sha256": {
+        "outputs/weighted_sqrt/summary.json": "072d685b6454c313b886e9b29758d24661e2d9ebe1caba0692cc45129764add0",
+        "outputs/weighted_sqrt/run_config.json": "7613bff0be461fbcaadd00e13d39bcb5cd4c4bc3b1db065af614bdfeb12a1273"
+      },
+      "predictions": "outputs/weighted_sqrt/predictions.csv",
+      "predictions_sha256": "7330b4e257aa271b8132c4a919df7ba7eb1321f7f0e3d5739055100b74b07324",
+      "prediction_rows": 1000,
+      "different_predictions_from_kaggle_candidate": 15
+    },
+    {
+      "id": "weighted_url",
+      "name": "URL 正規化",
+      "kind": "single",
+      "output": "outputs/weighted_url",
+      "checkpoints": [
+        "outputs/weighted_url/checkpoint"
+      ],
+      "report": "docs/reports/URL_Normalization_Report.md",
+      "kaggle_macro_f1": 0.8977,
+      "decision": "未採用；保留對照",
+      "validation": {
+        "loss": 0.2309531929473289,
+        "macro_f1": 0.9128294633680992,
+        "classes": {
+          "negative": {
+            "precision": 0.9580093312597201,
+            "recall": 0.9685534591194969,
+            "f1-score": 0.9632525410476935,
+            "support": 636.0
+          },
+          "neutral": {
+            "precision": 0.8473282442748091,
+            "recall": 0.8283582089552238,
+            "f1-score": 0.8377358490566038,
+            "support": 134.0
+          },
+          "positive": {
+            "precision": 0.9523809523809523,
+            "recall": 0.9230769230769231,
+            "f1-score": 0.9375,
+            "support": 130.0
+          }
+        },
+        "confusion_matrix": [
+          [
+            616,
+            16,
+            4
+          ],
+          [
+            21,
+            111,
+            2
+          ],
+          [
+            6,
+            4,
+            120
+          ]
+        ]
+      },
+      "best_epoch": 2,
+      "training_seconds": 1000.5133743000042,
+      "source_sha256": {
+        "outputs/weighted_url/summary.json": "3d842a9e6b19a70cfeb095442101eb8d5eb3000a2b266f88cd6b6236628179dd",
+        "outputs/weighted_url/run_config.json": "39dbf2f7b2b83848ef93aeb09775812341298fb7ac66c79529c61c62533a7b0e"
+      },
+      "predictions": "outputs/weighted_url/predictions.csv",
+      "predictions_sha256": "38153fc076261fc4b45df257274bd8f8e15e176a836e4ee48153c8fb881138d3",
+      "prediction_rows": 1000,
+      "different_predictions_from_kaggle_candidate": 32
+    },
+    {
+      "id": "weighted_lr1e5",
+      "name": "加權 1e-5",
+      "kind": "single",
+      "output": "outputs/weighted_lr1e5",
+      "checkpoints": [
+        "outputs/weighted_lr1e5/checkpoint"
+      ],
+      "report": "docs/reports/Learning_Rate_Report.md",
+      "kaggle_macro_f1": 0.9012,
+      "decision": "未採用；保留對照",
+      "validation": {
+        "loss": 0.23609355334140775,
+        "macro_f1": 0.914628795568447,
+        "classes": {
+          "negative": {
+            "precision": 0.9595015576323987,
+            "recall": 0.9685534591194969,
+            "f1-score": 0.9640062597809077,
+            "support": 636.0
+          },
+          "neutral": {
+            "precision": 0.8507462686567164,
+            "recall": 0.8507462686567164,
+            "f1-score": 0.8507462686567164,
+            "support": 134.0
+          },
+          "positive": {
+            "precision": 0.9516129032258065,
+            "recall": 0.9076923076923077,
+            "f1-score": 0.9291338582677166,
+            "support": 130.0
+          }
+        },
+        "confusion_matrix": [
+          [
+            616,
+            16,
+            4
+          ],
+          [
+            18,
+            114,
+            2
+          ],
+          [
+            8,
+            4,
+            118
+          ]
+        ]
+      },
+      "best_epoch": 3,
+      "training_seconds": 1397.878635699999,
+      "source_sha256": {
+        "outputs/weighted_lr1e5/summary.json": "9e98af4d45758a227e3bc538bd7535fd477790c9f190c6aa474d4b3e1a8861c6",
+        "outputs/weighted_lr1e5/run_config.json": "0ee490970ab24c7543f146727b0e2f9f9c30f932bac43b83e510dfa6f96d94b2"
+      },
+      "predictions": "outputs/weighted_lr1e5/predictions.csv",
+      "predictions_sha256": "b36f7e9e20a648c371d8cb7ac77c0a72e4d758306769bd60a6f96f418e2d27b5",
+      "prediction_rows": 1000,
+      "different_predictions_from_kaggle_candidate": 26
+    },
+    {
+      "id": "weighted_lr3e5",
+      "name": "加權 3e-5",
+      "kind": "single",
+      "output": "outputs/weighted_lr3e5",
+      "checkpoints": [
+        "outputs/weighted_lr3e5/checkpoint"
+      ],
+      "report": "docs/reports/Learning_Rate_3e5_Report.md",
+      "kaggle_macro_f1": 0.9052,
+      "decision": "Kaggle 單模型候選",
+      "validation": {
+        "loss": 0.2751569959332442,
+        "macro_f1": 0.9210451968121104,
+        "classes": {
+          "negative": {
+            "precision": 0.9595645412130638,
+            "recall": 0.970125786163522,
+            "f1-score": 0.9648162627052385,
+            "support": 636.0
+          },
+          "neutral": {
+            "precision": 0.8636363636363636,
+            "recall": 0.8507462686567164,
+            "f1-score": 0.8571428571428571,
+            "support": 134.0
+          },
+          "positive": {
+            "precision": 0.96,
+            "recall": 0.9230769230769231,
+            "f1-score": 0.9411764705882353,
+            "support": 130.0
+          }
+        },
+        "confusion_matrix": [
+          [
+            617,
+            15,
+            4
+          ],
+          [
+            19,
+            114,
+            1
+          ],
+          [
+            7,
+            3,
+            120
+          ]
+        ]
+      },
+      "best_epoch": 3,
+      "training_seconds": 1064.7172773999991,
+      "source_sha256": {
+        "outputs/weighted_lr3e5/summary.json": "f22f88571603b04b930f9284285c1b29d8baa2d404a8b5ac6187bc61fadefaec",
+        "outputs/weighted_lr3e5/run_config.json": "0da5a2f75cac67306633f8293563baae834ad2bf47b93b58e1ff6621f6439359"
+      },
+      "predictions": "outputs/weighted_lr3e5/predictions.csv",
+      "predictions_sha256": "b6bae1443d4cdc28060906038e8d5ec5750e37225952693a718476ac0a013a7f",
+      "prediction_rows": 1000,
+      "different_predictions_from_kaggle_candidate": 0
+    },
+    {
+      "id": "ensemble_lr2_lr3_submission",
+      "name": "2e-5 / 3e-5 集成",
+      "kind": "ensemble",
+      "output": "outputs/ensemble_lr2_lr3_submission",
+      "checkpoints": [
+        "outputs/weighted_sqrt/checkpoint",
+        "outputs/weighted_lr3e5/checkpoint"
+      ],
+      "report": "docs/reports/Ensemble_Error_Analysis_Report.md",
+      "kaggle_macro_f1": 0.9052,
+      "decision": "同分，優先單模型",
+      "validation": {
+        "macro_f1": 0.9258115809008526,
+        "classes": {
+          "negative": {
+            "precision": 0.9613003095975232,
+            "recall": 0.9764150943396226,
+            "f1-score": 0.968798751950078,
+            "support": 636.0
+          },
+          "neutral": {
+            "precision": 0.8778625954198473,
+            "recall": 0.8582089552238806,
+            "f1-score": 0.8679245283018868,
+            "support": 134.0
+          },
+          "positive": {
+            "precision": 0.967479674796748,
+            "recall": 0.9153846153846154,
+            "f1-score": 0.9407114624505929,
+            "support": 130.0
+          }
+        },
+        "confusion_matrix": [
+          [
+            621,
+            12,
+            3
+          ],
+          [
+            18,
+            115,
+            1
+          ],
+          [
+            7,
+            4,
+            119
+          ]
+        ]
+      },
+      "best_epoch": null,
+      "training_seconds": null,
+      "source_sha256": {
+        "outputs/ensemble_lr2_lr3_submission/summary.json": "e75fc601ca16867cf16b6ef4c80f5036f26f2925bad9d7f39750e31c09d7c8a4"
+      },
+      "predictions": "outputs/ensemble_lr2_lr3_submission/predictions.csv",
+      "predictions_sha256": "dfda98c4126e7571579a0da661ff17372bfaf7203a4986dbff5379c5b5f56e22",
+      "prediction_rows": 1000,
+      "different_predictions_from_kaggle_candidate": 8
+    },
+    {
+      "id": "weighted_seed43",
+      "name": "加權 2e-5 / seed 43",
+      "kind": "single",
+      "output": "outputs/weighted_seed43",
+      "checkpoints": [
+        "outputs/weighted_seed43/checkpoint"
+      ],
+      "report": "docs/reports/Seed43_Report.md",
+      "kaggle_macro_f1": 0.8878,
+      "decision": "未採用；保留對照",
+      "validation": {
+        "loss": 0.25431959883827304,
+        "macro_f1": 0.9133436140875185,
+        "classes": {
+          "negative": {
+            "precision": 0.9608763693270735,
+            "recall": 0.9654088050314465,
+            "f1-score": 0.9631372549019608,
+            "support": 636.0
+          },
+          "neutral": {
+            "precision": 0.8518518518518519,
+            "recall": 0.8582089552238806,
+            "f1-score": 0.8550185873605948,
+            "support": 134.0
+          },
+          "positive": {
+            "precision": 0.9365079365079365,
+            "recall": 0.9076923076923077,
+            "f1-score": 0.921875,
+            "support": 130.0
+          }
+        },
+        "confusion_matrix": [
+          [
+            614,
+            16,
+            6
+          ],
+          [
+            17,
+            115,
+            2
+          ],
+          [
+            8,
+            4,
+            118
+          ]
+        ]
+      },
+      "best_epoch": 3,
+      "training_seconds": 1011.499375600004,
+      "source_sha256": {
+        "outputs/weighted_seed43/summary.json": "6c1085a7e2175d1a9d6820fe866919167187d908da5057341bfaf7fe67339b7b",
+        "outputs/weighted_seed43/run_config.json": "1778845cb7b7605c1de3abad063f8a397178ed63d14b53de418f01a60999bb0e"
+      },
+      "predictions": "outputs/weighted_seed43/predictions.csv",
+      "predictions_sha256": "d5673039e2bfa57198daabde1ffb3e612fabaed5c5dc2c86087686bbd87a6759",
+      "prediction_rows": 1000,
+      "different_predictions_from_kaggle_candidate": 30
+    },
+    {
+      "id": "ensemble_seed42_seed43",
+      "name": "seed 42 / 43 集成",
+      "kind": "ensemble",
+      "output": "outputs/ensemble_seed42_seed43",
+      "checkpoints": [
+        "outputs/weighted_sqrt/checkpoint",
+        "outputs/weighted_seed43/checkpoint"
+      ],
+      "report": "docs/reports/Seed_Ensemble_Report.md",
+      "kaggle_macro_f1": 0.8983,
+      "decision": "未採用；保留對照",
+      "validation": {
+        "macro_f1": 0.9246218125713264,
+        "classes": {
+          "negative": {
+            "precision": 0.9626749611197511,
+            "recall": 0.9732704402515723,
+            "f1-score": 0.9679437060203284,
+            "support": 636.0
+          },
+          "neutral": {
+            "precision": 0.8721804511278195,
+            "recall": 0.8656716417910447,
+            "f1-score": 0.8689138576779026,
+            "support": 134.0
+          },
+          "positive": {
+            "precision": 0.9596774193548387,
+            "recall": 0.9153846153846154,
+            "f1-score": 0.937007874015748,
+            "support": 130.0
+          }
+        },
+        "confusion_matrix": [
+          [
+            619,
+            13,
+            4
+          ],
+          [
+            17,
+            116,
+            1
+          ],
+          [
+            7,
+            4,
+            119
+          ]
+        ]
+      },
+      "best_epoch": null,
+      "training_seconds": null,
+      "source_sha256": {
+        "outputs/ensemble_seed42_seed43/summary.json": "31e0d99c36d300348946972fc6f21db38b5049ef0131a7cc062815786a8a424f"
+      },
+      "predictions": "outputs/ensemble_seed42_seed43/predictions.csv",
+      "predictions_sha256": "7695d07df372809a1961f13bb0755b9b2b0270d6f7a6849c6858720c9d17b065",
+      "prediction_rows": 1000,
+      "different_predictions_from_kaggle_candidate": 17
+    },
+    {
+      "id": "weighted_emoji",
+      "name": "Emoji 簡短描述",
+      "kind": "single",
+      "output": "outputs/weighted_emoji",
+      "checkpoints": [
+        "outputs/weighted_emoji/checkpoint"
+      ],
+      "report": "docs/reports/Emoji_Training_Report.md",
+      "kaggle_macro_f1": null,
+      "decision": "驗證未改善；Kaggle 待回報",
+      "validation": {
+        "loss": 0.27823414135905394,
+        "macro_f1": 0.9168356238066316,
+        "classes": {
+          "negative": {
+            "precision": 0.958204334365325,
+            "recall": 0.9732704402515723,
+            "f1-score": 0.9656786271450858,
+            "support": 636.0
+          },
+          "neutral": {
+            "precision": 0.8671875,
+            "recall": 0.8283582089552238,
+            "f1-score": 0.8473282442748091,
+            "support": 134.0
+          },
+          "positive": {
+            "precision": 0.9523809523809523,
+            "recall": 0.9230769230769231,
+            "f1-score": 0.9375,
+            "support": 130.0
+          }
+        },
+        "confusion_matrix": [
+          [
+            619,
+            14,
+            3
+          ],
+          [
+            20,
+            111,
+            3
+          ],
+          [
+            7,
+            3,
+            120
+          ]
+        ]
+      },
+      "best_epoch": 3,
+      "training_seconds": 1040.9361822999927,
+      "source_sha256": {
+        "outputs/weighted_emoji/summary.json": "b2a345bbe26558f1ac3b11a60e1d1364a6c4f39fe8d65736a785811d298bdd47",
+        "outputs/weighted_emoji/run_config.json": "2ad608c036ce6a988ad1e610516678a952f0c160621e16de11c1f49d86e3e8e6"
+      },
+      "predictions": "outputs/weighted_emoji/predictions.csv",
+      "predictions_sha256": "92fcdd3bc380fd2b471da01f9b36255eee3ebb17da3623ffc5d877d87d0a4368",
+      "prediction_rows": 1000,
+      "different_predictions_from_kaggle_candidate": 25
+    }
+  ]
+}

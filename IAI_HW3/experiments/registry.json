@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "reviewed_on": "2026-11-14",
+  "validation_reference": "weighted_sqrt",
+  "kaggle_candidate": "weighted_lr3e5",
+  "release_candidate": null,
+  "score_provenance": "Historical user reports preserved in the linked reports; not independently verified on Kaggle. null means unknown.",
+  "runs": [
+    {"id": "baseline", "name": "未加權基準", "kind": "single", "output": "outputs/baseline", "checkpoints": ["saved_models/checkpoint"], "report": "docs/reports/Baseline_Report.md", "kaggle_macro_f1": 0.8973, "decision": "保留基準；預設 checkpoint 仍指向此版本"},
+    {"id": "weighted_sqrt", "name": "加權 2e-5 / seed 42", "kind": "single", "output": "outputs/weighted_sqrt", "checkpoints": ["outputs/weighted_sqrt/checkpoint"], "report": "docs/reports/Weighted_CE_Report.md", "kaggle_macro_f1": 0.9049, "decision": "驗證基準"},
+    {"id": "weighted_url", "name": "URL 正規化", "kind": "single", "output": "outputs/weighted_url", "checkpoints": ["outputs/weighted_url/checkpoint"], "report": "docs/reports/URL_Normalization_Report.md", "kaggle_macro_f1": 0.8977, "decision": "未採用；保留對照"},
+    {"id": "weighted_lr1e5", "name": "加權 1e-5", "kind": "single", "output": "outputs/weighted_lr1e5", "checkpoints": ["outputs/weighted_lr1e5/checkpoint"], "report": "docs/reports/Learning_Rate_Report.md", "kaggle_macro_f1": 0.9012, "decision": "未採用；保留對照"},
+    {"id": "weighted_lr3e5", "name": "加權 3e-5", "kind": "single", "output": "outputs/weighted_lr3e5", "checkpoints": ["outputs/weighted_lr3e5/checkpoint"], "report": "docs/reports/Learning_Rate_3e5_Report.md", "kaggle_macro_f1": 0.9052, "decision": "Kaggle 單模型候選"},
+    {"id": "ensemble_lr2_lr3_submission", "name": "2e-5 / 3e-5 集成", "kind": "ensemble", "output": "outputs/ensemble_lr2_lr3_submission", "checkpoints": ["outputs/weighted_sqrt/checkpoint", "outputs/weighted_lr3e5/checkpoint"], "report": "docs/reports/Ensemble_Error_Analysis_Report.md", "kaggle_macro_f1": 0.9052, "decision": "同分，優先單模型"},
+    {"id": "weighted_seed43", "name": "加權 2e-5 / seed 43", "kind": "single", "output": "outputs/weighted_seed43", "checkpoints": ["outputs/weighted_seed43/checkpoint"], "report": "docs/reports/Seed43_Report.md", "kaggle_macro_f1": 0.8878, "decision": "未採用；保留對照"},
+    {"id": "ensemble_seed42_seed43", "name": "seed 42 / 43 集成", "kind": "ensemble", "output": "outputs/ensemble_seed42_seed43", "checkpoints": ["outputs/weighted_sqrt/checkpoint", "outputs/weighted_seed43/checkpoint"], "report": "docs/reports/Seed_Ensemble_Report.md", "kaggle_macro_f1": 0.8983, "decision": "未採用；保留對照"},
+    {"id": "weighted_emoji", "name": "Emoji 簡短描述", "kind": "single", "output": "outputs/weighted_emoji", "checkpoints": ["outputs/weighted_emoji/checkpoint"], "report": "docs/reports/Emoji_Training_Report.md", "kaggle_macro_f1": null, "decision": "驗證未改善；Kaggle 待回報"}
+  ]
+}
