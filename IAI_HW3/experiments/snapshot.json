@@ -1,13 +1,14 @@
 {
   "schema_version": 1,
-  "reviewed_on": "2026-11-14",
+  "reviewed_on": "2026-11-15",
   "roles": {
     "validation_reference": "weighted_sqrt",
-    "kaggle_candidate": "weighted_lr3e5",
+    "comparison_control": "weighted_half_epoch_control",
+    "kaggle_candidate": "weighted_quarter",
     "release_candidate": null
   },
   "score_provenance": "Historical user reports preserved in the linked reports; not independently verified on Kaggle. null means unknown.",
-  "registry_sha256": "9d10601a89725350e73df5de1c80ef636aaf8974407dc9bf6848d1ffa2e7ec52",
+  "registry_sha256": "2eb66d0eae1768de5e0f4e04cb3b8dd9a295b5c752df5f83782a9d7b6040d94c",
   "dataset_sha256": "aa410190a8facb5510bf853cb6f41acec5d374e568ec804192a2b212a419a55d",
   "benchmark_sha256": "1d9969750b41a7b9e2a7eeea4c7798ad8200adcbb5f652ee2353fcdc9777e4a2",
   "split_sha256": "c5a8afb4e92c8a24b2ac246f03fdc5046d00570b4320700425bb1c3587f9c308",
@@ -15,15 +16,19 @@
   "validation_rows": 900,
   "audit_scope": "File/metadata/CSV checks only; no model inference or platform verification. Current code hashes do not establish original training code provenance.",
   "current_code_sha256": {
-    "main.py": "4fa22e8ff53410b886f449acc1be8d4fb72ff86688f59d34aa78156b5c4fe623",
+    "main.py": "6d3566ce22051a75119b1e822191b6402f02105a33a03d083f1bb9716ddc8152",
     "src/__init__.py": "ee25363184124b0bb11e75541158ce31f7d9024ae158b6bde612b7e2b718a93b",
-    "src/training.py": "b5c8f6a6a85b175b4f70220374e4755de58be8603ab6fbd37cad0ba6e0abfae8",
+    "src/training.py": "22f00f554d5dda74c808049384945ee15e7349d3b4df2eab2bfe17a8e30df3ba",
     "src/eda.py": "1060df149ac43885edbca5cc4274916508b5dc34ed836c797c2a029e2871385c",
     "src/preprocessing.py": "695f0be4b4ff61cdf23e5ea2ad6110a2c7fbb0a3340cff4ac8c04318a020e356",
     "src/model_source.py": "afe5f5fff1b4dd99f9a47b00c03051d11a1c22897bc72bd8f1f199426fbe05ab",
     "tools/__init__.py": "a95a53b4ae731c56c5e476e34fcf1a462d1c41f7a602052c3c25cf144238eae0",
     "tools/analyze_ensemble.py": "71e6554c5001277c96c64ac5481f69b95f3d86a57f35945fa66a2e12a63567bc",
     "tools/audit_emoji.py": "fad8ac67f0a62abbbcbdb34a19cdfbe4b959aba268e25bdd65f3407621885f4b",
+    "tools/audit_precision.py": "e32b21633dde1017ccdc670a6dee0dc8f6a22a5cf3366824c3a8f2b45f00df64",
+    "tools/refresh_experiments.py": "27f8222f1bd78e31c9c3beadc1d032b3fc4a17071e00958c0a45cfb60b1af0af",
+    "tools/package_candidate.py": "a1b9b80615317bd3952ae3806bf4d4bcbcca4cef6b86e3e672bd0b3aa40da331",
+    "tools/verify_package.py": "dc6c106d7d33bbe825f55798aae67dbe040f698b5e844a04b7f352726b121f5b",
     "requirements.txt": "0a39d7bfedad701c31314a0f52ef8b2deb3e6d27212d58ccdca08f817c3f323f",
     "requirements/train.txt": "7c0978bb20dbd1f139d521b99b055661f7dcfc41b040d6f2e540735fab63ceb7",
     "requirements/eda.txt": "ca41f6c6308bc3a53b1af2ba304faa793bf0b5eb5399c0253f36c26fcc4dbcb3",
@@ -609,6 +614,724 @@
           ]
         }
       }
+    },
+    "outputs/weighted_half_epoch_control/checkpoint": {
+      "files_sha256": {
+        "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+        "training_config.json": "a9ba1406fa5c76ee9be18e4828c4aaafe38a2de6969d905b460c7e45cb642f48",
+        "model.safetensors": "e03e0bafe1209e66b5dd7e58a0e79633cf820b55dd51f21c934cbcdb649e8d07",
+        "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+        "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+        "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+        "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+      },
+      "config": {
+        "model": "google-bert/bert-base-uncased",
+        "revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+        "base_model_source": {
+          "model": "google-bert/bert-base-uncased",
+          "revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+          "directory": "D:\\GitHub\\Introduction-to-Artificial-Intelligence\\IAI_HW3\\outputs\\base_model",
+          "verification": "pinned-files-v1",
+          "reference": "https://huggingface.co/api/models/google-bert/bert-base-uncased/revision/86b5e0934494bd15c9632b12f734a8a67f723594?blobs=true",
+          "files": {
+            "config.json": {
+              "bytes": 570,
+              "sha256": "7160e1553ad2ca51d8c1cb066be533db31826e12d173824c1bb0cb1a4f187d20"
+            },
+            "model.safetensors": {
+              "bytes": 440449768,
+              "sha256": "68d45e234eb4a928074dfd868cead0219ab85354cc53d20e772753c6bb9169d3"
+            },
+            "tokenizer.json": {
+              "bytes": 466062,
+              "sha256": "ce64fce797c24f68df90b40a3f74f579b336a493db14bd583fd520ea0d8c9a98"
+            },
+            "tokenizer_config.json": {
+              "bytes": 48,
+              "sha256": "a025160ef0431f1a392f6f050c1310f4c5d9fb6f275932dbccba73c4d214bf10"
+            },
+            "vocab.txt": {
+              "bytes": 231508,
+              "sha256": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+            }
+          }
+        },
+        "training_code_sha256": {
+          "main.py": "58e21fa0a8b94f1f921fe13e9ae1d005e27e86e55a3d75f17cc8b7fb6dbfa537",
+          "src/__init__.py": "ee25363184124b0bb11e75541158ce31f7d9024ae158b6bde612b7e2b718a93b",
+          "src/training.py": "e80b12f42793e38b63b7fe755aeb0e2f36b792fbb6d52226fcd17f7dae8b931c",
+          "src/eda.py": "1060df149ac43885edbca5cc4274916508b5dc34ed836c797c2a029e2871385c",
+          "src/preprocessing.py": "695f0be4b4ff61cdf23e5ea2ad6110a2c7fbb0a3340cff4ac8c04318a020e356",
+          "src/model_source.py": "afe5f5fff1b4dd99f9a47b00c03051d11a1c22897bc72bd8f1f199426fbe05ab"
+        },
+        "seed": 42,
+        "labels": [
+          "negative",
+          "neutral",
+          "positive"
+        ],
+        "preprocessing": "whitespace-v1",
+        "max_length": 64,
+        "batch_size": 2,
+        "accumulation_steps": 8,
+        "learning_rate": 2e-05,
+        "weight_decay": 0.01,
+        "warmup_ratio": 0.1,
+        "epochs": 3,
+        "eval_interval": 0.5,
+        "evaluation_batch_ends": [
+          2032,
+          4050
+        ],
+        "evaluation_nominal_fractions": [
+          0.5,
+          1.0
+        ],
+        "optimizer_steps_planned": 1521,
+        "warmup_steps": 152,
+        "class_weighting": "sqrt-inverse",
+        "class_weights": [
+          0.7403528690338135,
+          1.6168463230133057,
+          1.637426495552063
+        ],
+        "loss_normalization": "weighted sum / actual accumulation-window sample count; train mean weight 1",
+        "evaluation_loss": "unweighted cross entropy for baseline comparison",
+        "amp": true,
+        "gradient_checkpointing": true,
+        "smoke": false,
+        "dataset_sha256": "aa410190a8facb5510bf853cb6f41acec5d374e568ec804192a2b212a419a55d",
+        "split_sha256": "c5a8afb4e92c8a24b2ac246f03fdc5046d00570b4320700425bb1c3587f9c308",
+        "best_epoch": 3.0,
+        "best_batch_in_epoch": 4050,
+        "best_optimizer_updates": 1518,
+        "validation": {
+          "loss": 0.26116083352981756,
+          "macro_f1": 0.9264883043107858,
+          "classes": {
+            "negative": {
+              "precision": 0.9628482972136223,
+              "recall": 0.9779874213836478,
+              "f1-score": 0.9703588143525741,
+              "support": 636.0
+            },
+            "neutral": {
+              "precision": 0.8712121212121212,
+              "recall": 0.8582089552238806,
+              "f1-score": 0.8646616541353384,
+              "support": 134.0
+            },
+            "positive": {
+              "precision": 0.9754098360655737,
+              "recall": 0.9153846153846154,
+              "f1-score": 0.9444444444444444,
+              "support": 130.0
+            }
+          },
+          "confusion_matrix": [
+            [
+              622,
+              12,
+              2
+            ],
+            [
+              18,
+              115,
+              1
+            ],
+            [
+              6,
+              5,
+              119
+            ]
+          ]
+        }
+      }
+    },
+    "outputs/weighted_quarter/checkpoint": {
+      "files_sha256": {
+        "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+        "training_config.json": "a669edfb55a425128d70d5d7f2fc5aee256f524a434ae576e2a1d200de79ea83",
+        "model.safetensors": "03abfa2f4014b2a5c51932280e02679475b3f2483a18642d74e564f924fe5dd6",
+        "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+        "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+        "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+        "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+      },
+      "config": {
+        "model": "google-bert/bert-base-uncased",
+        "revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+        "base_model_source": {
+          "model": "google-bert/bert-base-uncased",
+          "revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+          "directory": "D:\\GitHub\\Introduction-to-Artificial-Intelligence\\IAI_HW3\\outputs\\base_model",
+          "verification": "pinned-files-v1",
+          "reference": "https://huggingface.co/api/models/google-bert/bert-base-uncased/revision/86b5e0934494bd15c9632b12f734a8a67f723594?blobs=true",
+          "files": {
+            "config.json": {
+              "bytes": 570,
+              "sha256": "7160e1553ad2ca51d8c1cb066be533db31826e12d173824c1bb0cb1a4f187d20"
+            },
+            "model.safetensors": {
+              "bytes": 440449768,
+              "sha256": "68d45e234eb4a928074dfd868cead0219ab85354cc53d20e772753c6bb9169d3"
+            },
+            "tokenizer.json": {
+              "bytes": 466062,
+              "sha256": "ce64fce797c24f68df90b40a3f74f579b336a493db14bd583fd520ea0d8c9a98"
+            },
+            "tokenizer_config.json": {
+              "bytes": 48,
+              "sha256": "a025160ef0431f1a392f6f050c1310f4c5d9fb6f275932dbccba73c4d214bf10"
+            },
+            "vocab.txt": {
+              "bytes": 231508,
+              "sha256": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+            }
+          }
+        },
+        "training_code_sha256": {
+          "main.py": "216d2ef379dd8f03db032fd58591a2a27419bac751e7aee0ee912c8c4c90c678",
+          "src/__init__.py": "ee25363184124b0bb11e75541158ce31f7d9024ae158b6bde612b7e2b718a93b",
+          "src/training.py": "fd101c7b0d8e1e441e5199ba2d38d5717eea015c86c8579223c82b815229d684",
+          "src/eda.py": "1060df149ac43885edbca5cc4274916508b5dc34ed836c797c2a029e2871385c",
+          "src/preprocessing.py": "695f0be4b4ff61cdf23e5ea2ad6110a2c7fbb0a3340cff4ac8c04318a020e356",
+          "src/model_source.py": "afe5f5fff1b4dd99f9a47b00c03051d11a1c22897bc72bd8f1f199426fbe05ab"
+        },
+        "seed": 42,
+        "labels": [
+          "negative",
+          "neutral",
+          "positive"
+        ],
+        "preprocessing": "whitespace-v1",
+        "max_length": 64,
+        "batch_size": 2,
+        "accumulation_steps": 8,
+        "learning_rate": 2e-05,
+        "weight_decay": 0.01,
+        "warmup_ratio": 0.1,
+        "epochs": 3,
+        "eval_interval": 0.5,
+        "evaluation_batch_ends": [
+          2032,
+          4050
+        ],
+        "evaluation_nominal_fractions": [
+          0.5,
+          1.0
+        ],
+        "optimizer_steps_planned": 1521,
+        "warmup_steps": 152,
+        "class_weighting": "quarter-inverse",
+        "class_weights": [
+          0.8762142062187195,
+          1.2948673963546753,
+          1.3030822277069092
+        ],
+        "loss_normalization": "weighted sum / actual accumulation-window sample count; train mean weight 1",
+        "evaluation_loss": "unweighted cross entropy for baseline comparison",
+        "amp": true,
+        "gradient_checkpointing": true,
+        "smoke": false,
+        "dataset_sha256": "aa410190a8facb5510bf853cb6f41acec5d374e568ec804192a2b212a419a55d",
+        "split_sha256": "c5a8afb4e92c8a24b2ac246f03fdc5046d00570b4320700425bb1c3587f9c308",
+        "best_epoch": 3.0,
+        "best_batch_in_epoch": 4050,
+        "best_optimizer_updates": 1518,
+        "validation": {
+          "loss": 0.2813473372854706,
+          "macro_f1": 0.9191192187866243,
+          "classes": {
+            "negative": {
+              "precision": 0.9609984399375975,
+              "recall": 0.9685534591194969,
+              "f1-score": 0.9647611589663273,
+              "support": 636.0
+            },
+            "neutral": {
+              "precision": 0.8467153284671532,
+              "recall": 0.8656716417910447,
+              "f1-score": 0.8560885608856088,
+              "support": 134.0
+            },
+            "positive": {
+              "precision": 0.9672131147540983,
+              "recall": 0.9076923076923077,
+              "f1-score": 0.9365079365079365,
+              "support": 130.0
+            }
+          },
+          "confusion_matrix": [
+            [
+              616,
+              17,
+              3
+            ],
+            [
+              17,
+              116,
+              1
+            ],
+            [
+              8,
+              4,
+              118
+            ]
+          ]
+        }
+      }
+    },
+    "outputs/weighted_layer_lr/checkpoint": {
+      "files_sha256": {
+        "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+        "training_config.json": "9fa32f560e48ae0e248774620ec19c5801c94fd3f1162364c97e4c2804fbb9f6",
+        "model.safetensors": "e6c07817b5ead0bf1b57ad0bde81aecf3f8750977ecd310919ad3accc7c5826d",
+        "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+        "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+        "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+        "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+      },
+      "config": {
+        "model": "google-bert/bert-base-uncased",
+        "revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+        "base_model_source": {
+          "model": "google-bert/bert-base-uncased",
+          "revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+          "directory": "D:\\GitHub\\Introduction-to-Artificial-Intelligence\\IAI_HW3\\outputs\\base_model",
+          "verification": "pinned-files-v1",
+          "reference": "https://huggingface.co/api/models/google-bert/bert-base-uncased/revision/86b5e0934494bd15c9632b12f734a8a67f723594?blobs=true",
+          "files": {
+            "config.json": {
+              "bytes": 570,
+              "sha256": "7160e1553ad2ca51d8c1cb066be533db31826e12d173824c1bb0cb1a4f187d20"
+            },
+            "model.safetensors": {
+              "bytes": 440449768,
+              "sha256": "68d45e234eb4a928074dfd868cead0219ab85354cc53d20e772753c6bb9169d3"
+            },
+            "tokenizer.json": {
+              "bytes": 466062,
+              "sha256": "ce64fce797c24f68df90b40a3f74f579b336a493db14bd583fd520ea0d8c9a98"
+            },
+            "tokenizer_config.json": {
+              "bytes": 48,
+              "sha256": "a025160ef0431f1a392f6f050c1310f4c5d9fb6f275932dbccba73c4d214bf10"
+            },
+            "vocab.txt": {
+              "bytes": 231508,
+              "sha256": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+            }
+          }
+        },
+        "training_code_sha256": {
+          "main.py": "6d3566ce22051a75119b1e822191b6402f02105a33a03d083f1bb9716ddc8152",
+          "src/__init__.py": "ee25363184124b0bb11e75541158ce31f7d9024ae158b6bde612b7e2b718a93b",
+          "src/training.py": "22f00f554d5dda74c808049384945ee15e7349d3b4df2eab2bfe17a8e30df3ba",
+          "src/eda.py": "1060df149ac43885edbca5cc4274916508b5dc34ed836c797c2a029e2871385c",
+          "src/preprocessing.py": "695f0be4b4ff61cdf23e5ea2ad6110a2c7fbb0a3340cff4ac8c04318a020e356",
+          "src/model_source.py": "afe5f5fff1b4dd99f9a47b00c03051d11a1c22897bc72bd8f1f199426fbe05ab"
+        },
+        "seed": 42,
+        "labels": [
+          "negative",
+          "neutral",
+          "positive"
+        ],
+        "preprocessing": "whitespace-v1",
+        "max_length": 64,
+        "batch_size": 2,
+        "accumulation_steps": 8,
+        "learning_rate": 2e-05,
+        "layer_lr_decay": 0.9,
+        "optimizer_groups": [
+          {
+            "name": "encoder_11",
+            "learning_rate": 2e-05,
+            "weight_decay": 0.01,
+            "parameter_names": [
+              "bert.encoder.layer.11.attention.self.query.weight",
+              "bert.encoder.layer.11.attention.self.query.bias",
+              "bert.encoder.layer.11.attention.self.key.weight",
+              "bert.encoder.layer.11.attention.self.key.bias",
+              "bert.encoder.layer.11.attention.self.value.weight",
+              "bert.encoder.layer.11.attention.self.value.bias",
+              "bert.encoder.layer.11.attention.output.dense.weight",
+              "bert.encoder.layer.11.attention.output.dense.bias",
+              "bert.encoder.layer.11.attention.output.LayerNorm.weight",
+              "bert.encoder.layer.11.attention.output.LayerNorm.bias",
+              "bert.encoder.layer.11.intermediate.dense.weight",
+              "bert.encoder.layer.11.intermediate.dense.bias",
+              "bert.encoder.layer.11.output.dense.weight",
+              "bert.encoder.layer.11.output.dense.bias",
+              "bert.encoder.layer.11.output.LayerNorm.weight",
+              "bert.encoder.layer.11.output.LayerNorm.bias"
+            ],
+            "parameter_count": 7087872
+          },
+          {
+            "name": "head_pooler",
+            "learning_rate": 2e-05,
+            "weight_decay": 0.01,
+            "parameter_names": [
+              "bert.pooler.dense.weight",
+              "bert.pooler.dense.bias",
+              "classifier.weight",
+              "classifier.bias"
+            ],
+            "parameter_count": 592899
+          },
+          {
+            "name": "encoder_10",
+            "learning_rate": 1.8e-05,
+            "weight_decay": 0.01,
+            "parameter_names": [
+              "bert.encoder.layer.10.attention.self.query.weight",
+              "bert.encoder.layer.10.attention.self.query.bias",
+              "bert.encoder.layer.10.attention.self.key.weight",
+              "bert.encoder.layer.10.attention.self.key.bias",
+              "bert.encoder.layer.10.attention.self.value.weight",
+              "bert.encoder.layer.10.attention.self.value.bias",
+              "bert.encoder.layer.10.attention.output.dense.weight",
+              "bert.encoder.layer.10.attention.output.dense.bias",
+              "bert.encoder.layer.10.attention.output.LayerNorm.weight",
+              "bert.encoder.layer.10.attention.output.LayerNorm.bias",
+              "bert.encoder.layer.10.intermediate.dense.weight",
+              "bert.encoder.layer.10.intermediate.dense.bias",
+              "bert.encoder.layer.10.output.dense.weight",
+              "bert.encoder.layer.10.output.dense.bias",
+              "bert.encoder.layer.10.output.LayerNorm.weight",
+              "bert.encoder.layer.10.output.LayerNorm.bias"
+            ],
+            "parameter_count": 7087872
+          },
+          {
+            "name": "encoder_9",
+            "learning_rate": 1.62e-05,
+            "weight_decay": 0.01,
+            "parameter_names": [
+              "bert.encoder.layer.9.attention.self.query.weight",
+              "bert.encoder.layer.9.attention.self.query.bias",
+              "bert.encoder.layer.9.attention.self.key.weight",
+              "bert.encoder.layer.9.attention.self.key.bias",
+              "bert.encoder.layer.9.attention.self.value.weight",
+              "bert.encoder.layer.9.attention.self.value.bias",
+              "bert.encoder.layer.9.attention.output.dense.weight",
+              "bert.encoder.layer.9.attention.output.dense.bias",
+              "bert.encoder.layer.9.attention.output.LayerNorm.weight",
+              "bert.encoder.layer.9.attention.output.LayerNorm.bias",
+              "bert.encoder.layer.9.intermediate.dense.weight",
+              "bert.encoder.layer.9.intermediate.dense.bias",
+              "bert.encoder.layer.9.output.dense.weight",
+              "bert.encoder.layer.9.output.dense.bias",
+              "bert.encoder.layer.9.output.LayerNorm.weight",
+              "bert.encoder.layer.9.output.LayerNorm.bias"
+            ],
+            "parameter_count": 7087872
+          },
+          {
+            "name": "encoder_8",
+            "learning_rate": 1.4580000000000003e-05,
+            "weight_decay": 0.01,
+            "parameter_names": [
+              "bert.encoder.layer.8.attention.self.query.weight",
+              "bert.encoder.layer.8.attention.self.query.bias",
+              "bert.encoder.layer.8.attention.self.key.weight",
+              "bert.encoder.layer.8.attention.self.key.bias",
+              "bert.encoder.layer.8.attention.self.value.weight",
+              "bert.encoder.layer.8.attention.self.value.bias",
+              "bert.encoder.layer.8.attention.output.dense.weight",
+              "bert.encoder.layer.8.attention.output.dense.bias",
+              "bert.encoder.layer.8.attention.output.LayerNorm.weight",
+              "bert.encoder.layer.8.attention.output.LayerNorm.bias",
+              "bert.encoder.layer.8.intermediate.dense.weight",
+              "bert.encoder.layer.8.intermediate.dense.bias",
+              "bert.encoder.layer.8.output.dense.weight",
+              "bert.encoder.layer.8.output.dense.bias",
+              "bert.encoder.layer.8.output.LayerNorm.weight",
+              "bert.encoder.layer.8.output.LayerNorm.bias"
+            ],
+            "parameter_count": 7087872
+          },
+          {
+            "name": "encoder_7",
+            "learning_rate": 1.3122e-05,
+            "weight_decay": 0.01,
+            "parameter_names": [
+              "bert.encoder.layer.7.attention.self.query.weight",
+              "bert.encoder.layer.7.attention.self.query.bias",
+              "bert.encoder.layer.7.attention.self.key.weight",
+              "bert.encoder.layer.7.attention.self.key.bias",
+              "bert.encoder.layer.7.attention.self.value.weight",
+              "bert.encoder.layer.7.attention.self.value.bias",
+              "bert.encoder.layer.7.attention.output.dense.weight",
+              "bert.encoder.layer.7.attention.output.dense.bias",
+              "bert.encoder.layer.7.attention.output.LayerNorm.weight",
+              "bert.encoder.layer.7.attention.output.LayerNorm.bias",
+              "bert.encoder.layer.7.intermediate.dense.weight",
+              "bert.encoder.layer.7.intermediate.dense.bias",
+              "bert.encoder.layer.7.output.dense.weight",
+              "bert.encoder.layer.7.output.dense.bias",
+              "bert.encoder.layer.7.output.LayerNorm.weight",
+              "bert.encoder.layer.7.output.LayerNorm.bias"
+            ],
+            "parameter_count": 7087872
+          },
+          {
+            "name": "encoder_6",
+            "learning_rate": 1.1809800000000002e-05,
+            "weight_decay": 0.01,
+            "parameter_names": [
+              "bert.encoder.layer.6.attention.self.query.weight",
+              "bert.encoder.layer.6.attention.self.query.bias",
+              "bert.encoder.layer.6.attention.self.key.weight",
+              "bert.encoder.layer.6.attention.self.key.bias",
+              "bert.encoder.layer.6.attention.self.value.weight",
+              "bert.encoder.layer.6.attention.self.value.bias",
+              "bert.encoder.layer.6.attention.output.dense.weight",
+              "bert.encoder.layer.6.attention.output.dense.bias",
+              "bert.encoder.layer.6.attention.output.LayerNorm.weight",
+              "bert.encoder.layer.6.attention.output.LayerNorm.bias",
+              "bert.encoder.layer.6.intermediate.dense.weight",
+              "bert.encoder.layer.6.intermediate.dense.bias",
+              "bert.encoder.layer.6.output.dense.weight",
+              "bert.encoder.layer.6.output.dense.bias",
+              "bert.encoder.layer.6.output.LayerNorm.weight",
+              "bert.encoder.layer.6.output.LayerNorm.bias"
+            ],
+            "parameter_count": 7087872
+          },
+          {
+            "name": "encoder_5",
+            "learning_rate": 1.0628820000000002e-05,
+            "weight_decay": 0.01,
+            "parameter_names": [
+              "bert.encoder.layer.5.attention.self.query.weight",
+              "bert.encoder.layer.5.attention.self.query.bias",
+              "bert.encoder.layer.5.attention.self.key.weight",
+              "bert.encoder.layer.5.attention.self.key.bias",
+              "bert.encoder.layer.5.attention.self.value.weight",
+              "bert.encoder.layer.5.attention.self.value.bias",
+              "bert.encoder.layer.5.attention.output.dense.weight",
+              "bert.encoder.layer.5.attention.output.dense.bias",
+              "bert.encoder.layer.5.attention.output.LayerNorm.weight",
+              "bert.encoder.layer.5.attention.output.LayerNorm.bias",
+              "bert.encoder.layer.5.intermediate.dense.weight",
+              "bert.encoder.layer.5.intermediate.dense.bias",
+              "bert.encoder.layer.5.output.dense.weight",
+              "bert.encoder.layer.5.output.dense.bias",
+              "bert.encoder.layer.5.output.LayerNorm.weight",
+              "bert.encoder.layer.5.output.LayerNorm.bias"
+            ],
+            "parameter_count": 7087872
+          },
+          {
+            "name": "encoder_4",
+            "learning_rate": 9.565938000000002e-06,
+            "weight_decay": 0.01,
+            "parameter_names": [
+              "bert.encoder.layer.4.attention.self.query.weight",
+              "bert.encoder.layer.4.attention.self.query.bias",
+              "bert.encoder.layer.4.attention.self.key.weight",
+              "bert.encoder.layer.4.attention.self.key.bias",
+              "bert.encoder.layer.4.attention.self.value.weight",
+              "bert.encoder.layer.4.attention.self.value.bias",
+              "bert.encoder.layer.4.attention.output.dense.weight",
+              "bert.encoder.layer.4.attention.output.dense.bias",
+              "bert.encoder.layer.4.attention.output.LayerNorm.weight",
+              "bert.encoder.layer.4.attention.output.LayerNorm.bias",
+              "bert.encoder.layer.4.intermediate.dense.weight",
+              "bert.encoder.layer.4.intermediate.dense.bias",
+              "bert.encoder.layer.4.output.dense.weight",
+              "bert.encoder.layer.4.output.dense.bias",
+              "bert.encoder.layer.4.output.LayerNorm.weight",
+              "bert.encoder.layer.4.output.LayerNorm.bias"
+            ],
+            "parameter_count": 7087872
+          },
+          {
+            "name": "encoder_3",
+            "learning_rate": 8.609344200000003e-06,
+            "weight_decay": 0.01,
+            "parameter_names": [
+              "bert.encoder.layer.3.attention.self.query.weight",
+              "bert.encoder.layer.3.attention.self.query.bias",
+              "bert.encoder.layer.3.attention.self.key.weight",
+              "bert.encoder.layer.3.attention.self.key.bias",
+              "bert.encoder.layer.3.attention.self.value.weight",
+              "bert.encoder.layer.3.attention.self.value.bias",
+              "bert.encoder.layer.3.attention.output.dense.weight",
+              "bert.encoder.layer.3.attention.output.dense.bias",
+              "bert.encoder.layer.3.attention.output.LayerNorm.weight",
+              "bert.encoder.layer.3.attention.output.LayerNorm.bias",
+              "bert.encoder.layer.3.intermediate.dense.weight",
+              "bert.encoder.layer.3.intermediate.dense.bias",
+              "bert.encoder.layer.3.output.dense.weight",
+              "bert.encoder.layer.3.output.dense.bias",
+              "bert.encoder.layer.3.output.LayerNorm.weight",
+              "bert.encoder.layer.3.output.LayerNorm.bias"
+            ],
+            "parameter_count": 7087872
+          },
+          {
+            "name": "encoder_2",
+            "learning_rate": 7.748409780000003e-06,
+            "weight_decay": 0.01,
+            "parameter_names": [
+              "bert.encoder.layer.2.attention.self.query.weight",
+              "bert.encoder.layer.2.attention.self.query.bias",
+              "bert.encoder.layer.2.attention.self.key.weight",
+              "bert.encoder.layer.2.attention.self.key.bias",
+              "bert.encoder.layer.2.attention.self.value.weight",
+              "bert.encoder.layer.2.attention.self.value.bias",
+              "bert.encoder.layer.2.attention.output.dense.weight",
+              "bert.encoder.layer.2.attention.output.dense.bias",
+              "bert.encoder.layer.2.attention.output.LayerNorm.weight",
+              "bert.encoder.layer.2.attention.output.LayerNorm.bias",
+              "bert.encoder.layer.2.intermediate.dense.weight",
+              "bert.encoder.layer.2.intermediate.dense.bias",
+              "bert.encoder.layer.2.output.dense.weight",
+              "bert.encoder.layer.2.output.dense.bias",
+              "bert.encoder.layer.2.output.LayerNorm.weight",
+              "bert.encoder.layer.2.output.LayerNorm.bias"
+            ],
+            "parameter_count": 7087872
+          },
+          {
+            "name": "encoder_1",
+            "learning_rate": 6.973568802000002e-06,
+            "weight_decay": 0.01,
+            "parameter_names": [
+              "bert.encoder.layer.1.attention.self.query.weight",
+              "bert.encoder.layer.1.attention.self.query.bias",
+              "bert.encoder.layer.1.attention.self.key.weight",
+              "bert.encoder.layer.1.attention.self.key.bias",
+              "bert.encoder.layer.1.attention.self.value.weight",
+              "bert.encoder.layer.1.attention.self.value.bias",
+              "bert.encoder.layer.1.attention.output.dense.weight",
+              "bert.encoder.layer.1.attention.output.dense.bias",
+              "bert.encoder.layer.1.attention.output.LayerNorm.weight",
+              "bert.encoder.layer.1.attention.output.LayerNorm.bias",
+              "bert.encoder.layer.1.intermediate.dense.weight",
+              "bert.encoder.layer.1.intermediate.dense.bias",
+              "bert.encoder.layer.1.output.dense.weight",
+              "bert.encoder.layer.1.output.dense.bias",
+              "bert.encoder.layer.1.output.LayerNorm.weight",
+              "bert.encoder.layer.1.output.LayerNorm.bias"
+            ],
+            "parameter_count": 7087872
+          },
+          {
+            "name": "encoder_0",
+            "learning_rate": 6.276211921800002e-06,
+            "weight_decay": 0.01,
+            "parameter_names": [
+              "bert.encoder.layer.0.attention.self.query.weight",
+              "bert.encoder.layer.0.attention.self.query.bias",
+              "bert.encoder.layer.0.attention.self.key.weight",
+              "bert.encoder.layer.0.attention.self.key.bias",
+              "bert.encoder.layer.0.attention.self.value.weight",
+              "bert.encoder.layer.0.attention.self.value.bias",
+              "bert.encoder.layer.0.attention.output.dense.weight",
+              "bert.encoder.layer.0.attention.output.dense.bias",
+              "bert.encoder.layer.0.attention.output.LayerNorm.weight",
+              "bert.encoder.layer.0.attention.output.LayerNorm.bias",
+              "bert.encoder.layer.0.intermediate.dense.weight",
+              "bert.encoder.layer.0.intermediate.dense.bias",
+              "bert.encoder.layer.0.output.dense.weight",
+              "bert.encoder.layer.0.output.dense.bias",
+              "bert.encoder.layer.0.output.LayerNorm.weight",
+              "bert.encoder.layer.0.output.LayerNorm.bias"
+            ],
+            "parameter_count": 7087872
+          },
+          {
+            "name": "embeddings",
+            "learning_rate": 5.648590729620003e-06,
+            "weight_decay": 0.01,
+            "parameter_names": [
+              "bert.embeddings.word_embeddings.weight",
+              "bert.embeddings.position_embeddings.weight",
+              "bert.embeddings.token_type_embeddings.weight",
+              "bert.embeddings.LayerNorm.weight",
+              "bert.embeddings.LayerNorm.bias"
+            ],
+            "parameter_count": 23837184
+          }
+        ],
+        "weight_decay": 0.01,
+        "warmup_ratio": 0.1,
+        "epochs": 3,
+        "eval_interval": 0.5,
+        "evaluation_batch_ends": [
+          2032,
+          4050
+        ],
+        "evaluation_nominal_fractions": [
+          0.5,
+          1.0
+        ],
+        "optimizer_steps_planned": 1521,
+        "warmup_steps": 152,
+        "class_weighting": "sqrt-inverse",
+        "class_weights": [
+          0.7403528690338135,
+          1.6168463230133057,
+          1.637426495552063
+        ],
+        "loss_normalization": "weighted sum / actual accumulation-window sample count; train mean weight 1",
+        "evaluation_loss": "unweighted cross entropy for baseline comparison",
+        "amp": true,
+        "gradient_checkpointing": true,
+        "smoke": false,
+        "dataset_sha256": "aa410190a8facb5510bf853cb6f41acec5d374e568ec804192a2b212a419a55d",
+        "split_sha256": "c5a8afb4e92c8a24b2ac246f03fdc5046d00570b4320700425bb1c3587f9c308",
+        "best_epoch": 3.0,
+        "best_batch_in_epoch": 4050,
+        "best_optimizer_updates": 1517,
+        "validation": {
+          "loss": 0.24130077947888318,
+          "macro_f1": 0.9202680235362101,
+          "classes": {
+            "negative": {
+              "precision": 0.9553158705701078,
+              "recall": 0.9748427672955975,
+              "f1-score": 0.9649805447470817,
+              "support": 636.0
+            },
+            "neutral": {
+              "precision": 0.875968992248062,
+              "recall": 0.8432835820895522,
+              "f1-score": 0.8593155893536122,
+              "support": 134.0
+            },
+            "positive": {
+              "precision": 0.9672131147540983,
+              "recall": 0.9076923076923077,
+              "f1-score": 0.9365079365079365,
+              "support": 130.0
+            }
+          },
+          "confusion_matrix": [
+            [
+              620,
+              13,
+              3
+            ],
+            [
+              20,
+              113,
+              1
+            ],
+            [
+              9,
+              3,
+              118
+            ]
+          ]
+        }
+      }
     }
   },
   "runs": [
@@ -673,7 +1396,7 @@
       "predictions": "outputs/baseline/predictions.csv",
       "predictions_sha256": "be202424f6c72629c559606ffbf72369a9bbc18abc8077db386438d432fba6fa",
       "prediction_rows": 1000,
-      "different_predictions_from_kaggle_candidate": 16
+      "different_predictions_from_kaggle_candidate": 14
     },
     {
       "id": "weighted_sqrt",
@@ -736,7 +1459,7 @@
       "predictions": "outputs/weighted_sqrt/predictions.csv",
       "predictions_sha256": "7330b4e257aa271b8132c4a919df7ba7eb1321f7f0e3d5739055100b74b07324",
       "prediction_rows": 1000,
-      "different_predictions_from_kaggle_candidate": 15
+      "different_predictions_from_kaggle_candidate": 11
     },
     {
       "id": "weighted_url",
@@ -862,7 +1585,7 @@
       "predictions": "outputs/weighted_lr1e5/predictions.csv",
       "predictions_sha256": "b36f7e9e20a648c371d8cb7ac77c0a72e4d758306769bd60a6f96f418e2d27b5",
       "prediction_rows": 1000,
-      "different_predictions_from_kaggle_candidate": 26
+      "different_predictions_from_kaggle_candidate": 20
     },
     {
       "id": "weighted_lr3e5",
@@ -874,7 +1597,7 @@
       ],
       "report": "docs/reports/Learning_Rate_3e5_Report.md",
       "kaggle_macro_f1": 0.9052,
-      "decision": "Kaggle 單模型候選",
+      "decision": "原 Kaggle 單模型候選；保留已驗證封裝",
       "validation": {
         "loss": 0.2751569959332442,
         "macro_f1": 0.9210451968121104,
@@ -925,7 +1648,7 @@
       "predictions": "outputs/weighted_lr3e5/predictions.csv",
       "predictions_sha256": "b6bae1443d4cdc28060906038e8d5ec5750e37225952693a718476ac0a013a7f",
       "prediction_rows": 1000,
-      "different_predictions_from_kaggle_candidate": 0
+      "different_predictions_from_kaggle_candidate": 14
     },
     {
       "id": "ensemble_lr2_lr3_submission",
@@ -938,7 +1661,7 @@
       ],
       "report": "docs/reports/Ensemble_Error_Analysis_Report.md",
       "kaggle_macro_f1": 0.9052,
-      "decision": "同分，優先單模型",
+      "decision": "與原單模型候選同分；保留對照",
       "validation": {
         "macro_f1": 0.9258115809008526,
         "classes": {
@@ -987,7 +1710,7 @@
       "predictions": "outputs/ensemble_lr2_lr3_submission/predictions.csv",
       "predictions_sha256": "dfda98c4126e7571579a0da661ff17372bfaf7203a4986dbff5379c5b5f56e22",
       "prediction_rows": 1000,
-      "different_predictions_from_kaggle_candidate": 8
+      "different_predictions_from_kaggle_candidate": 14
     },
     {
       "id": "weighted_seed43",
@@ -1050,7 +1773,7 @@
       "predictions": "outputs/weighted_seed43/predictions.csv",
       "predictions_sha256": "d5673039e2bfa57198daabde1ffb3e612fabaed5c5dc2c86087686bbd87a6759",
       "prediction_rows": 1000,
-      "different_predictions_from_kaggle_candidate": 30
+      "different_predictions_from_kaggle_candidate": 28
     },
     {
       "id": "ensemble_seed42_seed43",
@@ -1123,8 +1846,8 @@
         "outputs/weighted_emoji/checkpoint"
       ],
       "report": "docs/reports/Emoji_Training_Report.md",
-      "kaggle_macro_f1": null,
-      "decision": "驗證未改善；Kaggle 待回報",
+      "kaggle_macro_f1": 0.9009,
+      "decision": "驗證與 Kaggle 均未改善；保留對照",
       "validation": {
         "loss": 0.27823414135905394,
         "macro_f1": 0.9168356238066316,
@@ -1175,7 +1898,772 @@
       "predictions": "outputs/weighted_emoji/predictions.csv",
       "predictions_sha256": "92fcdd3bc380fd2b471da01f9b36255eee3ebb17da3623ffc5d877d87d0a4368",
       "prediction_rows": 1000,
-      "different_predictions_from_kaggle_candidate": 25
+      "different_predictions_from_kaggle_candidate": 17
+    },
+    {
+      "id": "weighted_half_epoch_control",
+      "name": "半輪評估 / 加權 2e-5 控制組",
+      "kind": "single",
+      "output": "outputs/weighted_half_epoch_control",
+      "checkpoints": [
+        "outputs/weighted_half_epoch_control/checkpoint"
+      ],
+      "report": "docs/reports/Half_Epoch_Control_Report.md",
+      "kaggle_macro_f1": null,
+      "submission_status": "duplicate_not_submitted",
+      "decision": "新方法共同控制組；CSV 與 weighted_sqrt 相同，不重複提交",
+      "validation": {
+        "loss": 0.26116083352981756,
+        "macro_f1": 0.9264883043107858,
+        "classes": {
+          "negative": {
+            "precision": 0.9628482972136223,
+            "recall": 0.9779874213836478,
+            "f1-score": 0.9703588143525741,
+            "support": 636.0
+          },
+          "neutral": {
+            "precision": 0.8712121212121212,
+            "recall": 0.8582089552238806,
+            "f1-score": 0.8646616541353384,
+            "support": 134.0
+          },
+          "positive": {
+            "precision": 0.9754098360655737,
+            "recall": 0.9153846153846154,
+            "f1-score": 0.9444444444444444,
+            "support": 130.0
+          }
+        },
+        "confusion_matrix": [
+          [
+            622,
+            12,
+            2
+          ],
+          [
+            18,
+            115,
+            1
+          ],
+          [
+            6,
+            5,
+            119
+          ]
+        ]
+      },
+      "best_epoch": 3.0,
+      "training_seconds": null,
+      "source_sha256": {
+        "outputs/weighted_half_epoch_control/summary.json": "6e985f1f97789b09a7a1adae3f79ee9a8482e1eb05cc620cd4a332d4b327da8e",
+        "outputs/weighted_half_epoch_control/run_config.json": "5fcf46ed9f8820e2526b740b3830feecc750d546fdad09e1358310ec4e82d08a",
+        "outputs/weighted_half_epoch_control/history.json": "aebd9f69c2375469e96ee76feb790349c9b13a22974af7a5210d5c9c576259fc",
+        "outputs/weighted_half_epoch_control/curves.png": "b763041ff94dcec66cccc0112d45153980148e918637732608194835f2f2dd19",
+        "outputs/weighted_half_epoch_control/control_design_check.json": "0d1a95654202fb4161227527fb69f83f59c106f8dfb50205ede122d615407237",
+        "outputs/weighted_half_epoch_control/precision_summary.json": "1b8dab954b8207cb889e88536df5c54ec0015c01e0de8d0826f6aa7be6782ad2",
+        "outputs/weighted_half_epoch_control/finish_interrupted_run.py": "a6af47488960fd2e8c26040c13ee72f80fa12b3d1a5a762b91dff5177dd7982f",
+        "outputs/weighted_half_epoch_control/recovery/disagreements.csv": "28a24d7c45c5dd4750d4dd91a4420b67e27a5f3a2ad65503c13bd6594d3319a5",
+        "outputs/weighted_half_epoch_control/recovery/errors.csv": "62abb13830ccec42dae80d25fb5aa682c52a04098b83c527285cc0e64e069131",
+        "outputs/weighted_half_epoch_control/recovery/original_execution.json": "af7e134fe35bcafe715f0f3976c7bf5ce49d6cdcf3e7df1e2f64cc2376b78037",
+        "outputs/weighted_half_epoch_control/recovery/probabilities.csv": "fc0a15fd0dd9fd063dec1f343d33c94db2046c69ce8cdb39002824bc90cea297",
+        "outputs/weighted_half_epoch_control/control_comparison.json": "3f9499ed4fee11d3c8a07f7afdc8b7df390e115041a7c2d1f0259a28902606b0"
+      },
+      "predictions": "outputs/weighted_half_epoch_control/predictions.csv",
+      "predictions_sha256": "7330b4e257aa271b8132c4a919df7ba7eb1321f7f0e3d5739055100b74b07324",
+      "prediction_rows": 1000,
+      "different_predictions_from_kaggle_candidate": 11
+    },
+    {
+      "id": "weighted_quarter",
+      "name": "較溫和 n^-0.25 權重",
+      "kind": "single",
+      "output": "outputs/weighted_quarter",
+      "checkpoints": [
+        "outputs/weighted_quarter/checkpoint"
+      ],
+      "report": "docs/reports/Quarter_Weight_Report.md",
+      "kaggle_macro_f1": 0.9122,
+      "submission_status": "user_reported",
+      "score_reported_on": "2026-11-15",
+      "score_provenance": "User reported in chat; not independently verified on Kaggle",
+      "decision": "Kaggle 最高分單模型候選；本機驗證下降，跨切分穩定性待確認",
+      "validation": {
+        "loss": 0.2813473372854706,
+        "macro_f1": 0.9191192187866243,
+        "classes": {
+          "negative": {
+            "precision": 0.9609984399375975,
+            "recall": 0.9685534591194969,
+            "f1-score": 0.9647611589663273,
+            "support": 636.0
+          },
+          "neutral": {
+            "precision": 0.8467153284671532,
+            "recall": 0.8656716417910447,
+            "f1-score": 0.8560885608856088,
+            "support": 134.0
+          },
+          "positive": {
+            "precision": 0.9672131147540983,
+            "recall": 0.9076923076923077,
+            "f1-score": 0.9365079365079365,
+            "support": 130.0
+          }
+        },
+        "confusion_matrix": [
+          [
+            616,
+            17,
+            3
+          ],
+          [
+            17,
+            116,
+            1
+          ],
+          [
+            8,
+            4,
+            118
+          ]
+        ]
+      },
+      "best_epoch": 3.0,
+      "training_seconds": 1177.5144338999817,
+      "source_sha256": {
+        "outputs/weighted_quarter/summary.json": "5b6a8baa407d80fffdf01655f79343e807ff33810f9946429d7c087ea4ac63d9",
+        "outputs/weighted_quarter/run_config.json": "6ef6e125717408f989cdc99979736746d86c6d655d448c057bbf997124f50644",
+        "outputs/weighted_quarter/history.json": "10babacd7314b3f150990e44fcfef821f6f572ab759dbf2010d1b15c914715c1",
+        "outputs/weighted_quarter/curves.png": "9c9f99d52c78fbcb21fa4ceda14742110eb4ac47b2b53405f13c7853b198f973",
+        "outputs/weighted_quarter/control_comparison.json": "73154bcc9f206560dc575e30331a3d5a2016e9a4b919de4105e8143f2959ce1e"
+      },
+      "predictions": "outputs/weighted_quarter/predictions.csv",
+      "predictions_sha256": "800684403958197f4de9e0641b829c3240e24e7f49f9de8253196bf5c7911294",
+      "prediction_rows": 1000,
+      "different_predictions_from_kaggle_candidate": 0
+    },
+    {
+      "id": "weighted_layer_lr",
+      "name": "分層學習率 / decay 0.9",
+      "kind": "single",
+      "output": "outputs/weighted_layer_lr",
+      "checkpoints": [
+        "outputs/weighted_layer_lr/checkpoint"
+      ],
+      "report": "docs/reports/Layer_LR_Report.md",
+      "kaggle_macro_f1": 0.8989,
+      "submission_status": "user_reported",
+      "decision": "驗證與 Kaggle 均未改善；保留對照，不擴大 decay 搜尋",
+      "score_reported_on": "2026-11-15",
+      "score_provenance": "User reported in chat; not independently verified on Kaggle",
+      "validation": {
+        "loss": 0.24130077947888318,
+        "macro_f1": 0.9202680235362101,
+        "classes": {
+          "negative": {
+            "precision": 0.9553158705701078,
+            "recall": 0.9748427672955975,
+            "f1-score": 0.9649805447470817,
+            "support": 636.0
+          },
+          "neutral": {
+            "precision": 0.875968992248062,
+            "recall": 0.8432835820895522,
+            "f1-score": 0.8593155893536122,
+            "support": 134.0
+          },
+          "positive": {
+            "precision": 0.9672131147540983,
+            "recall": 0.9076923076923077,
+            "f1-score": 0.9365079365079365,
+            "support": 130.0
+          }
+        },
+        "confusion_matrix": [
+          [
+            620,
+            13,
+            3
+          ],
+          [
+            20,
+            113,
+            1
+          ],
+          [
+            9,
+            3,
+            118
+          ]
+        ]
+      },
+      "best_epoch": 3.0,
+      "training_seconds": 1259.0180634999997,
+      "source_sha256": {
+        "outputs/weighted_layer_lr/summary.json": "45a935241ee7f1eeb5bfcc264aee39b418c194eb02bb9fb71b36b35ec9c260f1",
+        "outputs/weighted_layer_lr/run_config.json": "cdb7e812de9f8babee3d8cb85fa5788252c9c85272277d3f9aaa93232c1ab89b",
+        "outputs/weighted_layer_lr/history.json": "6532eb2e18be9ab1ea5a52cae23b3e2df9d17e2e5b55551e3c8c1100156fedda",
+        "outputs/weighted_layer_lr/curves.png": "ef6940770baf1f49c5d9cbb0aa4eeb1008108cda1e3ab1fc8c0987a5c4070eba",
+        "outputs/weighted_layer_lr/control_comparison.json": "8230f9e459e3b6dd462c6bccbd913beee4f116d23e155bef8451ffd0a9b0a8d9"
+      },
+      "predictions": "outputs/weighted_layer_lr/predictions.csv",
+      "predictions_sha256": "47c39add40d1d68f6a2b4cb85f061add88bec97a5c2cf2c656dab5d4f043e9c1",
+      "prediction_rows": 1000,
+      "different_predictions_from_kaggle_candidate": 21
+    }
+  ],
+  "audits": [
+    {
+      "id": "precision_audit_20261115",
+      "kind": "precision",
+      "output": "outputs/precision_audit_20261115",
+      "run_ids": [
+        "weighted_sqrt",
+        "weighted_lr3e5"
+      ],
+      "report": "docs/reports/Precision_Audit_Report.md",
+      "summary_sha256": "4bb3871b109558fbb14d846996193acb080d8ebb387cb031443ddac219135694",
+      "results": {
+        "schema_version": 1,
+        "started_at_utc": "2026-11-15T03:55:31.184671+00:00",
+        "labels": [
+          "negative",
+          "neutral",
+          "positive"
+        ],
+        "training_runs": 0,
+        "inference_pass_budget": 8,
+        "inference_time_limit_seconds": 1800,
+        "warmup_batches_per_pass": 3,
+        "timing_scope": "One warmed full loop per mode; includes transfers, softmax, and validation loss; excludes loading/tokenization/writes. Not a calibrated speed benchmark.",
+        "source_sha256": {
+          "dataset/dataset.csv": "aa410190a8facb5510bf853cb6f41acec5d374e568ec804192a2b212a419a55d",
+          "dataset/benchmark.csv": "1d9969750b41a7b9e2a7eeea4c7798ad8200adcbb5f652ee2353fcdc9777e4a2",
+          "outputs/eda/split.json": "c5a8afb4e92c8a24b2ac246f03fdc5046d00570b4320700425bb1c3587f9c308",
+          "main.py": "4fa22e8ff53410b886f449acc1be8d4fb72ff86688f59d34aa78156b5c4fe623",
+          "src/training.py": "b5c8f6a6a85b175b4f70220374e4755de58be8603ab6fbd37cad0ba6e0abfae8",
+          "src/eda.py": "1060df149ac43885edbca5cc4274916508b5dc34ed836c797c2a029e2871385c",
+          "src/preprocessing.py": "695f0be4b4ff61cdf23e5ea2ad6110a2c7fbb0a3340cff4ac8c04318a020e356",
+          "src/model_source.py": "afe5f5fff1b4dd99f9a47b00c03051d11a1c22897bc72bd8f1f199426fbe05ab",
+          "tools/audit_precision.py": "e32b21633dde1017ccdc670a6dee0dc8f6a22a5cf3366824c3a8f2b45f00df64",
+          "tools/analyze_ensemble.py": "71e6554c5001277c96c64ac5481f69b95f3d86a57f35945fa66a2e12a63567bc",
+          "tools/refresh_experiments.py": "a01f82d864c5953bd70a40c36cc305a57ac693d714ebd79f2cf55ee10872afec",
+          "requirements/lock.txt": "792515ce7e96dc1c2ca462594691343cc4132d12231b315df863bbc118853d56"
+        },
+        "environment": {
+          "python": "3.12.10",
+          "torch": "2.9.1+cu126",
+          "transformers": "4.57.3",
+          "cuda": "12.6",
+          "gpu": "NVIDIA GeForce RTX 3050 Laptop GPU",
+          "float32_matmul_precision": "highest",
+          "cuda_matmul_allow_tf32": false,
+          "cudnn_allow_tf32": true
+        },
+        "runs": {
+          "weighted_sqrt": {
+            "checkpoint": "outputs/weighted_sqrt/checkpoint",
+            "checkpoint_files_sha256": {
+              "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+              "training_config.json": "f270a1da26ecca4e2f3d4c1b6488dd9dfd276ad3dd46d786fd71d91697d83faa",
+              "model.safetensors": "e03e0bafe1209e66b5dd7e58a0e79633cf820b55dd51f21c934cbcdb649e8d07",
+              "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+              "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+              "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+              "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+            },
+            "saved_predictions": "outputs/weighted_sqrt/predictions.csv",
+            "saved_predictions_sha256": "7330b4e257aa271b8132c4a919df7ba7eb1321f7f0e3d5739055100b74b07324",
+            "batch_size": 2,
+            "max_length": 64,
+            "preprocessing": "whitespace-v1",
+            "validation": {
+              "amp": {
+                "seconds": 4.545408200006932,
+                "rows_per_second": 198.00201882828202,
+                "logits_dtype": "torch.float16",
+                "rows": 900,
+                "mean_confidence": 0.9888193011283875,
+                "min_top2_margin": 0.04429459571838379,
+                "metrics": {
+                  "loss": 0.26116083352981756,
+                  "macro_f1": 0.9264883043107858,
+                  "classes": {
+                    "negative": {
+                      "precision": 0.9628482972136223,
+                      "recall": 0.9779874213836478,
+                      "f1-score": 0.9703588143525741,
+                      "support": 636.0
+                    },
+                    "neutral": {
+                      "precision": 0.8712121212121212,
+                      "recall": 0.8582089552238806,
+                      "f1-score": 0.8646616541353384,
+                      "support": 134.0
+                    },
+                    "positive": {
+                      "precision": 0.9754098360655737,
+                      "recall": 0.9153846153846154,
+                      "f1-score": 0.9444444444444444,
+                      "support": 130.0
+                    }
+                  },
+                  "confusion_matrix": [
+                    [
+                      622,
+                      12,
+                      2
+                    ],
+                    [
+                      18,
+                      115,
+                      1
+                    ],
+                    [
+                      6,
+                      5,
+                      119
+                    ]
+                  ]
+                },
+                "errors": 44
+              },
+              "fp32": {
+                "seconds": 3.6859588000224903,
+                "rows_per_second": 244.16984801742996,
+                "logits_dtype": "torch.float32",
+                "rows": 900,
+                "mean_confidence": 0.9888104796409607,
+                "min_top2_margin": 0.04029262065887451,
+                "metrics": {
+                  "loss": 0.26112823356253406,
+                  "macro_f1": 0.9264883043107858,
+                  "classes": {
+                    "negative": {
+                      "precision": 0.9628482972136223,
+                      "recall": 0.9779874213836478,
+                      "f1-score": 0.9703588143525741,
+                      "support": 636.0
+                    },
+                    "neutral": {
+                      "precision": 0.8712121212121212,
+                      "recall": 0.8582089552238806,
+                      "f1-score": 0.8646616541353384,
+                      "support": 134.0
+                    },
+                    "positive": {
+                      "precision": 0.9754098360655737,
+                      "recall": 0.9153846153846154,
+                      "f1-score": 0.9444444444444444,
+                      "support": 130.0
+                    }
+                  },
+                  "confusion_matrix": [
+                    [
+                      622,
+                      12,
+                      2
+                    ],
+                    [
+                      18,
+                      115,
+                      1
+                    ],
+                    [
+                      6,
+                      5,
+                      119
+                    ]
+                  ]
+                },
+                "errors": 44
+              },
+              "comparison": {
+                "label_disagreements": 0,
+                "disagreement_ids": [],
+                "probability_abs_diff_mean": 2.4101940653054044e-05,
+                "probability_abs_diff_max": 0.004243195056915283,
+                "probability_abs_diff_p99": 0.0005339779891073704,
+                "confidence_abs_diff_max": 0.004243195056915283,
+                "fp32_minus_amp_macro_f1": 0.0
+              },
+              "amp_reproduces_saved_validation": true
+            },
+            "benchmark": {
+              "amp": {
+                "seconds": 4.99432880000677,
+                "rows_per_second": 200.22710559197554,
+                "logits_dtype": "torch.float16",
+                "rows": 1000,
+                "mean_confidence": 0.9873577952384949,
+                "min_top2_margin": 0.006815552711486816
+              },
+              "fp32": {
+                "seconds": 4.1878847000189126,
+                "rows_per_second": 238.78403337978335,
+                "logits_dtype": "torch.float32",
+                "rows": 1000,
+                "mean_confidence": 0.987349808216095,
+                "min_top2_margin": 0.007574677467346191
+              },
+              "comparison": {
+                "label_disagreements": 0,
+                "disagreement_ids": [],
+                "probability_abs_diff_mean": 1.8139735402655788e-05,
+                "probability_abs_diff_max": 0.0017180591821670532,
+                "probability_abs_diff_p99": 0.0005287712556309998,
+                "confidence_abs_diff_max": 0.0014391541481018066
+              },
+              "differences_from_saved_csv": {
+                "amp": 0,
+                "fp32": 0
+              }
+            }
+          },
+          "weighted_lr3e5": {
+            "checkpoint": "outputs/weighted_lr3e5/checkpoint",
+            "checkpoint_files_sha256": {
+              "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+              "training_config.json": "e009ff274353e177161fae37e2cffbbc3e3f87e73bf1d20b28c992a09168c8c7",
+              "model.safetensors": "07518d9f0c3072761ae5513aa93fcc4cacbbef291b9c5fa35610e6f90800af96",
+              "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+              "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+              "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+              "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+            },
+            "saved_predictions": "outputs/weighted_lr3e5/predictions.csv",
+            "saved_predictions_sha256": "b6bae1443d4cdc28060906038e8d5ec5750e37225952693a718476ac0a013a7f",
+            "batch_size": 2,
+            "max_length": 64,
+            "preprocessing": "whitespace-v1",
+            "validation": {
+              "amp": {
+                "seconds": 4.557024000008823,
+                "rows_per_second": 197.49731403614672,
+                "logits_dtype": "torch.float16",
+                "rows": 900,
+                "mean_confidence": 0.9884677529335022,
+                "min_top2_margin": 0.010223031044006348,
+                "metrics": {
+                  "loss": 0.2751569959332442,
+                  "macro_f1": 0.9210451968121104,
+                  "classes": {
+                    "negative": {
+                      "precision": 0.9595645412130638,
+                      "recall": 0.970125786163522,
+                      "f1-score": 0.9648162627052385,
+                      "support": 636.0
+                    },
+                    "neutral": {
+                      "precision": 0.8636363636363636,
+                      "recall": 0.8507462686567164,
+                      "f1-score": 0.8571428571428571,
+                      "support": 134.0
+                    },
+                    "positive": {
+                      "precision": 0.96,
+                      "recall": 0.9230769230769231,
+                      "f1-score": 0.9411764705882353,
+                      "support": 130.0
+                    }
+                  },
+                  "confusion_matrix": [
+                    [
+                      617,
+                      15,
+                      4
+                    ],
+                    [
+                      19,
+                      114,
+                      1
+                    ],
+                    [
+                      7,
+                      3,
+                      120
+                    ]
+                  ]
+                },
+                "errors": 49
+              },
+              "fp32": {
+                "seconds": 4.454965600016294,
+                "rows_per_second": 202.02176196303475,
+                "logits_dtype": "torch.float32",
+                "rows": 900,
+                "mean_confidence": 0.9884714484214783,
+                "min_top2_margin": 0.009563982486724854,
+                "metrics": {
+                  "loss": 0.27520390649610715,
+                  "macro_f1": 0.9210451968121104,
+                  "classes": {
+                    "negative": {
+                      "precision": 0.9595645412130638,
+                      "recall": 0.970125786163522,
+                      "f1-score": 0.9648162627052385,
+                      "support": 636.0
+                    },
+                    "neutral": {
+                      "precision": 0.8636363636363636,
+                      "recall": 0.8507462686567164,
+                      "f1-score": 0.8571428571428571,
+                      "support": 134.0
+                    },
+                    "positive": {
+                      "precision": 0.96,
+                      "recall": 0.9230769230769231,
+                      "f1-score": 0.9411764705882353,
+                      "support": 130.0
+                    }
+                  },
+                  "confusion_matrix": [
+                    [
+                      617,
+                      15,
+                      4
+                    ],
+                    [
+                      19,
+                      114,
+                      1
+                    ],
+                    [
+                      7,
+                      3,
+                      120
+                    ]
+                  ]
+                },
+                "errors": 49
+              },
+              "comparison": {
+                "label_disagreements": 0,
+                "disagreement_ids": [],
+                "probability_abs_diff_mean": 2.0680790839833207e-05,
+                "probability_abs_diff_max": 0.004203200340270996,
+                "probability_abs_diff_p99": 0.0003508067748043686,
+                "confidence_abs_diff_max": 0.004203200340270996,
+                "fp32_minus_amp_macro_f1": 0.0
+              },
+              "amp_reproduces_saved_validation": true
+            },
+            "benchmark": {
+              "amp": {
+                "seconds": 6.219351899984758,
+                "rows_per_second": 160.78845771734683,
+                "logits_dtype": "torch.float16",
+                "rows": 1000,
+                "mean_confidence": 0.9864411354064941,
+                "min_top2_margin": 0.04922205209732056
+              },
+              "fp32": {
+                "seconds": 5.389107900002273,
+                "rows_per_second": 185.55946894282414,
+                "logits_dtype": "torch.float32",
+                "rows": 1000,
+                "mean_confidence": 0.9864454865455627,
+                "min_top2_margin": 0.043259114027023315
+              },
+              "comparison": {
+                "label_disagreements": 0,
+                "disagreement_ids": [],
+                "probability_abs_diff_mean": 2.220228998339735e-05,
+                "probability_abs_diff_max": 0.002999812364578247,
+                "probability_abs_diff_p99": 0.0006780073163099587,
+                "confidence_abs_diff_max": 0.002963125705718994
+              },
+              "differences_from_saved_csv": {
+                "amp": 0,
+                "fp32": 0
+              }
+            }
+          }
+        },
+        "completed": true,
+        "historical_reproduction_passed": true,
+        "all_precision_labels_identical": true,
+        "artifacts_sha256": {
+          "weighted_lr3e5/benchmark/disagreements.csv": "1a367338fcfba9c8a21a50715d81276193f87bb5de86ee155a44b2826f849249",
+          "weighted_lr3e5/benchmark/predictions_amp.csv": "b6bae1443d4cdc28060906038e8d5ec5750e37225952693a718476ac0a013a7f",
+          "weighted_lr3e5/benchmark/predictions_fp32.csv": "b6bae1443d4cdc28060906038e8d5ec5750e37225952693a718476ac0a013a7f",
+          "weighted_lr3e5/benchmark/probabilities.csv": "0bdb786798c8c4c10451cf6c5c26ea27d1aae63a71c77f182068aed10e9999c2",
+          "weighted_lr3e5/validation/disagreements.csv": "28a24d7c45c5dd4750d4dd91a4420b67e27a5f3a2ad65503c13bd6594d3319a5",
+          "weighted_lr3e5/validation/errors.csv": "1437df254da0cfc332aca4aa9f71e0edac8171f8f4eadb422c434166797082e5",
+          "weighted_lr3e5/validation/probabilities.csv": "112fc269e72f086a02e0c9f974a91335044f9b6aa6392e4a1c3a7a3def5e4dc8",
+          "weighted_sqrt/benchmark/disagreements.csv": "1a367338fcfba9c8a21a50715d81276193f87bb5de86ee155a44b2826f849249",
+          "weighted_sqrt/benchmark/predictions_amp.csv": "7330b4e257aa271b8132c4a919df7ba7eb1321f7f0e3d5739055100b74b07324",
+          "weighted_sqrt/benchmark/predictions_fp32.csv": "7330b4e257aa271b8132c4a919df7ba7eb1321f7f0e3d5739055100b74b07324",
+          "weighted_sqrt/benchmark/probabilities.csv": "72eecc6d25d5bfdbc71a3192f02f138c86e8d5e10716bbab4b1126e4518271c9",
+          "weighted_sqrt/validation/disagreements.csv": "28a24d7c45c5dd4750d4dd91a4420b67e27a5f3a2ad65503c13bd6594d3319a5",
+          "weighted_sqrt/validation/errors.csv": "62abb13830ccec42dae80d25fb5aa682c52a04098b83c527285cc0e64e069131",
+          "weighted_sqrt/validation/probabilities.csv": "fc0a15fd0dd9fd063dec1f343d33c94db2046c69ce8cdb39002824bc90cea297"
+        },
+        "finished_at_utc": "2026-11-15T03:56:12.129104+00:00"
+      }
+    }
+  ],
+  "package_rehearsals": [
+    {
+      "id": "package_rehearsal_20261115",
+      "run_id": "weighted_lr3e5",
+      "summary": "outputs/package_rehearsal_20261115/summary.json",
+      "report": "docs/reports/Package_Rehearsal_Report.md",
+      "summary_sha256": "bf043dbe4cb7bada3d26f8d4b673195ce93772c0d16dc416b9d24e35f301e0d8",
+      "results": {
+        "candidate": "weighted_lr3e5",
+        "archive": "outputs/package_rehearsal_20261115/build/HW3_rehearsal_weighted_lr3e5.zip",
+        "archive_bytes": 407968988,
+        "archive_sha256": "6e7476cda021ce00eb32ef1d26ea09c12f34bcb598633fc2fdfe49960da74894",
+        "extracted": "outputs/package_rehearsal_20261115/build/extracted/HW3_rehearsal_weighted_lr3e5",
+        "manifest_sha256": "453a78da45d7579b23f60bda53f601b3fe75babc5a15f5de73c5ffbd7eb7f2a0",
+        "files_verified": 28,
+        "clean_environment_verified": true,
+        "prediction_verified": true,
+        "predictions": "outputs/package_rehearsal_20261115/build/extracted/HW3_rehearsal_weighted_lr3e5/outputs/predictions.csv",
+        "predictions_sha256": "b6bae1443d4cdc28060906038e8d5ec5750e37225952693a718476ac0a013a7f",
+        "prediction_rows": 1000,
+        "label_differences": 0,
+        "byte_identical": true,
+        "training_runs": 0,
+        "inference_passes": 1,
+        "locked_packages_installed": 39,
+        "installation_source": "Unmodified existing pip-cache wheels; fresh venv; offline pip install using packaged requirements.txt and lock.txt",
+        "environment": {
+          "python": "3.12.10",
+          "platform": "Windows-11-10.0.26300-SP0",
+          "executable": "D:\\GitHub\\Introduction-to-Artificial-Intelligence\\IAI_HW3\\outputs\\package_rehearsal_20261115\\build\\extracted\\HW3_rehearsal_weighted_lr3e5\\.venv\\Scripts\\python.exe",
+          "prefix": "D:\\GitHub\\Introduction-to-Artificial-Intelligence\\IAI_HW3\\outputs\\package_rehearsal_20261115\\build\\extracted\\HW3_rehearsal_weighted_lr3e5\\.venv",
+          "base_prefix": "C:\\Users\\haolu\\AppData\\Local\\Programs\\Python\\Python312",
+          "user_site_enabled": false,
+          "sys_path": [
+            "",
+            "C:\\Users\\haolu\\AppData\\Local\\Programs\\Python\\Python312\\python312.zip",
+            "C:\\Users\\haolu\\AppData\\Local\\Programs\\Python\\Python312\\DLLs",
+            "C:\\Users\\haolu\\AppData\\Local\\Programs\\Python\\Python312\\Lib",
+            "C:\\Users\\haolu\\AppData\\Local\\Programs\\Python\\Python312",
+            "D:\\GitHub\\Introduction-to-Artificial-Intelligence\\IAI_HW3\\outputs\\package_rehearsal_20261115\\build\\extracted\\HW3_rehearsal_weighted_lr3e5\\.venv",
+            "D:\\GitHub\\Introduction-to-Artificial-Intelligence\\IAI_HW3\\outputs\\package_rehearsal_20261115\\build\\extracted\\HW3_rehearsal_weighted_lr3e5\\.venv\\Lib\\site-packages"
+          ],
+          "installed_locked_packages": {
+            "certifi": "2026.10.23",
+            "charset-normalizer": "3.5.2",
+            "cloudpickle": "3.1.2",
+            "colorama": "0.4.6",
+            "contourpy": "1.4.0",
+            "cycler": "0.12.1",
+            "filelock": "4.2.10",
+            "fonttools": "4.68.0",
+            "fsspec": "2026.9.0",
+            "huggingface_hub": "0.36.2",
+            "idna": "3.20",
+            "Jinja2": "3.1.6",
+            "joblib": "1.6.0",
+            "kiwisolver": "1.5.1",
+            "MarkupSafe": "3.0.3",
+            "matplotlib": "3.10.8",
+            "mpmath": "1.3.0",
+            "networkx": "3.7",
+            "numpy": "2.5.4",
+            "packaging": "26.3",
+            "pillow": "13.0.0",
+            "pyparsing": "3.3.3",
+            "python-dateutil": "4.0.0",
+            "PyYAML": "6.0.3",
+            "regex": "2026.11.9",
+            "requests": "2.34.2",
+            "safetensors": "0.8.0",
+            "scikit-learn": "1.7.2",
+            "scipy": "1.18.1",
+            "setuptools": "78.1.0",
+            "sympy": "1.14.0",
+            "threadpoolctl": "3.8.0",
+            "tokenizers": "0.22.2",
+            "torch": "2.9.1+cu126",
+            "tqdm": "4.70.1",
+            "transformers": "4.57.3",
+            "typing_extensions": "4.16.0",
+            "tzdata": "2026.6",
+            "urllib3": "2.8.0"
+          },
+          "module_paths": {
+            "torch": "D:\\GitHub\\Introduction-to-Artificial-Intelligence\\IAI_HW3\\outputs\\package_rehearsal_20261115\\build\\extracted\\HW3_rehearsal_weighted_lr3e5\\.venv\\Lib\\site-packages\\torch\\__init__.py",
+            "transformers": "D:\\GitHub\\Introduction-to-Artificial-Intelligence\\IAI_HW3\\outputs\\package_rehearsal_20261115\\build\\extracted\\HW3_rehearsal_weighted_lr3e5\\.venv\\Lib\\site-packages\\transformers\\__init__.py",
+            "numpy": "D:\\GitHub\\Introduction-to-Artificial-Intelligence\\IAI_HW3\\outputs\\package_rehearsal_20261115\\build\\extracted\\HW3_rehearsal_weighted_lr3e5\\.venv\\Lib\\site-packages\\numpy\\__init__.py",
+            "sklearn": "D:\\GitHub\\Introduction-to-Artificial-Intelligence\\IAI_HW3\\outputs\\package_rehearsal_20261115\\build\\extracted\\HW3_rehearsal_weighted_lr3e5\\.venv\\Lib\\site-packages\\sklearn\\__init__.py",
+            "matplotlib": "D:\\GitHub\\Introduction-to-Artificial-Intelligence\\IAI_HW3\\outputs\\package_rehearsal_20261115\\build\\extracted\\HW3_rehearsal_weighted_lr3e5\\.venv\\Lib\\site-packages\\matplotlib\\__init__.py",
+            "tokenizers": "D:\\GitHub\\Introduction-to-Artificial-Intelligence\\IAI_HW3\\outputs\\package_rehearsal_20261115\\build\\extracted\\HW3_rehearsal_weighted_lr3e5\\.venv\\Lib\\site-packages\\tokenizers\\__init__.py",
+            "safetensors": "D:\\GitHub\\Introduction-to-Artificial-Intelligence\\IAI_HW3\\outputs\\package_rehearsal_20261115\\build\\extracted\\HW3_rehearsal_weighted_lr3e5\\.venv\\Lib\\site-packages\\safetensors\\__init__.py",
+            "src.training": "D:\\GitHub\\Introduction-to-Artificial-Intelligence\\IAI_HW3\\outputs\\package_rehearsal_20261115\\build\\extracted\\HW3_rehearsal_weighted_lr3e5\\src\\training.py",
+            "src.preprocessing": "D:\\GitHub\\Introduction-to-Artificial-Intelligence\\IAI_HW3\\outputs\\package_rehearsal_20261115\\build\\extracted\\HW3_rehearsal_weighted_lr3e5\\src\\preprocessing.py",
+            "src.model_source": "D:\\GitHub\\Introduction-to-Artificial-Intelligence\\IAI_HW3\\outputs\\package_rehearsal_20261115\\build\\extracted\\HW3_rehearsal_weighted_lr3e5\\src\\model_source.py",
+            "src.eda": "D:\\GitHub\\Introduction-to-Artificial-Intelligence\\IAI_HW3\\outputs\\package_rehearsal_20261115\\build\\extracted\\HW3_rehearsal_weighted_lr3e5\\src\\eda.py"
+          },
+          "gpu": "NVIDIA GeForce RTX 3050 Laptop GPU",
+          "torch": "2.9.1+cu126",
+          "cuda": "12.6",
+          "float32_matmul_precision": "highest",
+          "cuda_matmul_allow_tf32": false
+        },
+        "offline_inference": true,
+        "empty_model_cache_after_inference": true,
+        "inference_process_seconds": 12.705302699992899,
+        "evidence_sha256": {
+          "outputs/package_rehearsal_20261115/installation.json": "c844753528304fe32ebd8b5c4bf2b74c82c0f71bbfec849e470bb0bd337dc411",
+          "outputs/package_rehearsal_20261115/install.log": "b02c3dd963318605a3ec18efcda6f9b58cc01bf985ce618c4394c1c2074181fa",
+          "outputs/package_rehearsal_20261115/wheelhouse_manifest.json": "f0a97ddd5abf0cd0d29e4920629f10b7cd7234e44adf333b001fe70109e91a06",
+          "outputs/package_rehearsal_20261115/verification/commands.json": "610e1165e69956f94ee3e0d30bf53b0de935fb1dfb400e6d9b6df7993b6343b5",
+          "outputs/package_rehearsal_20261115/verification/environment.log": "72429ef9d2b687a1400386310181d7e120d7688e5f351920dd2bcba094a0b2df",
+          "outputs/package_rehearsal_20261115/verification/inspect.log": "ec1ba331997e34f7c1245035ebd9f8f593a40e76aeeb079a75b95b3d7a0e11d6",
+          "outputs/package_rehearsal_20261115/verification/pip_check.log": "672aec65a45bed50e70229c70934a7eebf0462595c459b83023027645d57cccf",
+          "outputs/package_rehearsal_20261115/verification/predict.log": "c38586bce5a4eb4a30bbe0a6580ff943e79ab9e745b4c0c66e7c9b9a50cdc028",
+          "outputs/package_rehearsal_20261115/verification/verify_before.log": "2f417b1ff8921599ba0adf73e8ff4f32d8e127d9c886b4cb0e0bc7f5054de8c0",
+          "outputs/package_rehearsal_20261115/verification/verify_predictions.log": "aa3df454af98557574b0fceb276a67328dc991ec5bd0972f382d1a14afcb36aa"
+        }
+      }
+    }
+  ],
+  "confirmation_splits": [
+    {
+      "seed": 142,
+      "path": "outputs/confirmation_splits/seed142.json",
+      "sha256": "0e8095739a28499f03e5552aa4d807eedbaaf19f7183eabc5afd9a3eb60d34a3",
+      "train_rows": 8100,
+      "validation_rows": 900,
+      "class_counts": {
+        "train": {
+          "negative": 5728,
+          "positive": 1171,
+          "neutral": 1201
+        },
+        "validation": {
+          "negative": 636,
+          "neutral": 134,
+          "positive": 130
+        }
+      },
+      "overlap_with_primary_validation": 91
+    },
+    {
+      "seed": 242,
+      "path": "outputs/confirmation_splits/seed242.json",
+      "sha256": "a24f2cc762a1396ae5b4b7f3af20d82f96f1fd9e7d3b336d04aa13a302d70f5f",
+      "train_rows": 8100,
+      "validation_rows": 900,
+      "class_counts": {
+        "train": {
+          "negative": 5728,
+          "neutral": 1201,
+          "positive": 1171
+        },
+        "validation": {
+          "positive": 130,
+          "negative": 636,
+          "neutral": 134
+        }
+      },
+      "overlap_with_primary_validation": 103
     }
   ]
 }

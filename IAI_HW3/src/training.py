@@ -115,17 +115,36 @@ def choose_device(name):
 
 @torch.inference_mode()
 def evaluate(model, batches, device, amp=False):
-    model.eval()
-    truth, predicted, loss_sum = [], [], 0.0
-    for batch in batches:
-        batch = {k: v.to(device) for k, v in batch.items()}
-        labels = batch.pop("labels")
-        with torch.autocast(device_type=device.type, dtype=torch.float16, enabled=amp):
-            logits = model(**batch).logits
-        loss_sum += F.cross_entropy(logits.float(), labels, reduction="sum").item()
-        truth.extend(labels.tolist())
-        predicted.extend(logits.argmax(-1).tolist())
-    return {"loss": loss_sum / len(truth), **metrics(truth, predicted)}
+    was_training = model.training
+    devices = [device.index if device.index is not None else torch.cuda.current_device()] if device.type == "cuda" else []
+    try:
+        model.eval()
+        # Mid-epoch evaluation must not consume the training dropout RNG stream.
+        with torch.random.fork_rng(devices=devices):
+            truth, predicted, loss_sum = [], [], 0.0
+            for batch in batches:
+                batch = {k: v.to(device) for k, v in batch.items()}
+                labels = batch.pop("labels")
+                with torch.autocast(device_type=device.type, dtype=torch.float16, enabled=amp):
+                    logits = model(**batch).logits
+                loss_sum += F.cross_entropy(logits.float(), labels, reduction="sum").item()
+                truth.extend(labels.tolist())
+                predicted.extend(logits.argmax(-1).tolist())
+        return {"loss": loss_sum / len(truth), **metrics(truth, predicted)}
+    finally:
+        model.train(was_training)
+
+
+def evaluation_points(num_batches, accumulation, interval):
+    """Map completed batch counts to nominal epoch fractions, without partial windows."""
+    if min(num_batches, accumulation) < 1 or interval not in (0.5, 1.0):
+        raise ValueError("Invalid evaluation schedule")
+    points = {num_batches: 1.0}
+    if interval == 0.5:
+        midpoint = math.ceil(num_batches / (2 * accumulation)) * accumulation
+        if midpoint < num_batches:
+            points[midpoint] = 0.5
+    return dict(sorted(points.items()))
 
 
 def accumulation_sample_count(batch_index, batch_size, accumulation, dataset_size):
@@ -134,15 +153,15 @@ def accumulation_sample_count(batch_index, batch_size, accumulation, dataset_siz
 
 
 def class_weights(rows, method):
-    """Train-only inverse-square-root weights, with mean sample weight one."""
+    """Train-only inverse-power weights, with mean sample weight one."""
     if method == "none":
         return None
-    if method != "sqrt-inverse":
+    if method not in ("sqrt-inverse", "quarter-inverse"):
         raise ValueError(f"Unknown class weighting: {method}")
     counts = torch.tensor([sum(r["label"] == label for r in rows) for label in LABELS], dtype=torch.float64)
     if (counts <= 0).any():
         raise ValueError("Class weighting requires every class in training data")
-    weights = counts.rsqrt()
+    weights = counts.rsqrt() if method == "sqrt-inverse" else counts.pow(-0.25)
     weights /= (counts * weights).sum() / counts.sum()
     return weights.float()
 
@@ -170,7 +189,49 @@ def plot_history(history, path):
     plt.close(fig)
 
 
+def optimizer_groups(model, learning_rate, layer_decay=1.0):
+    """Keep uniform AdamW unchanged; optionally decay BERT LR toward embeddings.
+
+    Pooler and classifier use the top encoder LR. Weight decay remains 0.01
+    for every parameter, including biases/LayerNorm, as in the control run.
+    """
+    if not math.isfinite(learning_rate) or learning_rate <= 0 or not 0 < layer_decay <= 1:
+        raise ValueError("Learning rate must be finite/positive and layer decay in (0, 1]")
+    named = list(model.named_parameters())
+    if layer_decay == 1.0:
+        return [{"params": [p for _, p in named], "lr": learning_rate,
+                 "group_name": "uniform", "parameter_names": [n for n, _ in named]}]
+    if getattr(model.config, "model_type", None) != "bert":
+        raise ValueError("Layer learning-rate decay requires BERT")
+    depth = model.config.num_hidden_layers
+    groups = {}
+    for name, parameter in named:
+        if name.startswith(("classifier.", "bert.pooler.")):
+            exponent, group_name = 0, "head_pooler"
+        elif name.startswith("bert.embeddings."):
+            exponent, group_name = depth, "embeddings"
+        elif name.startswith("bert.encoder.layer."):
+            layer = int(name.split(".")[3])
+            if not 0 <= layer < depth:
+                raise ValueError(f"Unexpected BERT layer: {name}")
+            exponent, group_name = depth - 1 - layer, f"encoder_{layer}"
+        else:
+            raise ValueError(f"Unassigned BERT parameter: {name}")
+        group = groups.setdefault(group_name, {"params": [], "lr": learning_rate * layer_decay**exponent,
+                                              "group_name": group_name, "parameter_names": []})
+        group["params"].append(parameter)
+        group["parameter_names"].append(name)
+    # Top rate first keeps the historical next_learning_rate field meaningful.
+    return sorted(groups.values(), key=lambda group: -group["lr"])
+
+
 def train(args):
+    layer_decay = getattr(args, "layer_lr_decay", 1.0)
+    if not 0 < layer_decay <= 1:
+        raise ValueError("Layer LR decay must be in (0, 1]")
+    eval_interval = getattr(args, "eval_interval", 1.0)
+    if eval_interval not in (0.5, 1.0):
+        raise ValueError("Evaluation interval must be 0.5 or 1.0 epochs")
     if min(args.epochs, args.batch_size, args.accumulation_steps, args.max_length) < 1:
         raise ValueError("Epochs, batch size, accumulation and max length must be positive")
     if args.max_length > 512 or args.learning_rate <= 0 or not 0 <= args.warmup_ratio < 1:
@@ -214,7 +275,13 @@ def train(args):
     train_batches = loader(train_rows, tokenizer, args.max_length, args.batch_size, True, args.seed, preprocessing=args.preprocessing)
     train_eval = loader(train_rows, tokenizer, args.max_length, args.batch_size, preprocessing=args.preprocessing)
     val_batches = loader(val_rows, tokenizer, args.max_length, args.batch_size, preprocessing=args.preprocessing)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=0.01, foreach=False)
+    eval_points = evaluation_points(len(train_batches), args.accumulation_steps, eval_interval)
+    groups = optimizer_groups(model, args.learning_rate, layer_decay)
+    group_config = [{"name": g["group_name"], "learning_rate": g["lr"], "weight_decay": 0.01,
+                     "parameter_names": g["parameter_names"],
+                     "parameter_count": sum(p.numel() for p in g["params"])} for g in groups]
+    optimizer = torch.optim.AdamW(groups, lr=args.learning_rate, weight_decay=0.01, foreach=False)
+    del groups  # Do not retain model tensors across checkpoint reload.
     total_steps = epochs * math.ceil(len(train_batches) / args.accumulation_steps)
     scheduler = get_linear_schedule_with_warmup(optimizer, int(total_steps * args.warmup_ratio), total_steps)
     scaler = torch.amp.GradScaler("cuda", enabled=amp)
@@ -223,7 +290,11 @@ def train(args):
               "seed": args.seed, "labels": list(LABELS),
               "preprocessing": args.preprocessing, "max_length": args.max_length, "batch_size": args.batch_size,
               "accumulation_steps": args.accumulation_steps, "learning_rate": args.learning_rate,
+              "layer_lr_decay": layer_decay, "optimizer_groups": group_config,
               "weight_decay": 0.01, "warmup_ratio": args.warmup_ratio, "epochs": epochs,
+              "eval_interval": eval_interval, "evaluation_batch_ends": list(eval_points),
+              "evaluation_nominal_fractions": list(eval_points.values()),
+              "optimizer_steps_planned": total_steps, "warmup_steps": int(total_steps * args.warmup_ratio),
               "class_weighting": args.class_weighting,
               "class_weights": weights.tolist() if weights is not None else None,
               "loss_normalization": "weighted sum / actual accumulation-window sample count; train mean weight 1",
@@ -240,7 +311,7 @@ def train(args):
     print(json.dumps(environment), flush=True)
     print(f"Train {len(train_rows)} / validation {len(val_rows)}; optimizer steps planned: {total_steps}", flush=True)
     print(f"Class weights ({', '.join(LABELS)}): {config['class_weights']}", flush=True)
-    best_f1, history, update_count = -1.0, [], 0
+    best_f1, history, update_count, attempted_updates = -1.0, [], 0, 0
     started = time.perf_counter()
     for epoch in range(1, epochs + 1):
         epoch_started = time.perf_counter()
@@ -258,6 +329,7 @@ def train(args):
                 raise ValueError("Non-finite training loss")
             scaler.scale(loss).backward()
             if (index + 1) % args.accumulation_steps == 0 or index + 1 == len(train_batches):
+                attempted_updates += 1
                 scaler.unscale_(optimizer)
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 previous_scale = scaler.get_scale()
@@ -269,20 +341,33 @@ def train(args):
                 optimizer.zero_grad(set_to_none=True)
                 if args.smoke or update_count % 25 == 0:
                     print(f"Epoch {epoch}: batch {index+1}/{len(train_batches)}, updates {update_count}", flush=True)
-        row = {"epoch": epoch, "train": evaluate(model, train_eval, device, amp),
-               "validation": evaluate(model, val_batches, device, amp),
-               "seconds": time.perf_counter() - epoch_started, "optimizer_updates": update_count}
-        history.append(row)
-        if row["validation"]["macro_f1"] > best_f1:
-            best_f1 = row["validation"]["macro_f1"]
-            model.save_pretrained(checkpoint, safe_serialization=True)
-            tokenizer.save_pretrained(checkpoint)
-            write_json(checkpoint / "training_config.json", {**config, "best_epoch": epoch, "validation": row["validation"]})
-        write_json(output / "history.json", history)
-        plot_history(history, output / "curves.png")
-        print(f"Epoch {epoch}: train F1={row['train']['macro_f1']:.4f}, val F1={row['validation']['macro_f1']:.4f}, {row['seconds']:.1f}s", flush=True)
+            if index + 1 in eval_points:
+                point = epoch - 1 + eval_points[index + 1]
+                row = {"epoch": point, "batch_in_epoch": index + 1,
+                       "actual_epoch_progress": epoch - 1 + min((index + 1) * args.batch_size, len(train_rows)) / len(train_rows),
+                       "train": evaluate(model, train_eval, device, amp),
+                       "validation": evaluate(model, val_batches, device, amp),
+                       "seconds": time.perf_counter() - epoch_started,
+                       "optimizer_updates": update_count, "attempted_updates": attempted_updates,
+                       "skipped_updates": attempted_updates - update_count,
+                       "scheduler_steps": scheduler.last_epoch, "next_learning_rate": optimizer.param_groups[0]["lr"]}
+                row["next_learning_rates"] = {g["group_name"]: g["lr"] for g in optimizer.param_groups}
+                history.append(row)
+                if row["validation"]["macro_f1"] > best_f1:
+                    best_f1 = row["validation"]["macro_f1"]
+                    model.save_pretrained(checkpoint, safe_serialization=True)
+                    tokenizer.save_pretrained(checkpoint)
+                    write_json(checkpoint / "training_config.json", {
+                        **config, "best_epoch": point, "best_batch_in_epoch": index + 1,
+                        "best_optimizer_updates": update_count, "validation": row["validation"]})
+                write_json(output / "history.json", history)
+                plot_history(history, output / "curves.png")
+                print(f"Epoch {point:g}: train F1={row['train']['macro_f1']:.4f}, val F1={row['validation']['macro_f1']:.4f}, {row['seconds']:.1f}s", flush=True)
     if update_count == 0:
         raise ValueError("No optimizer updates succeeded")
+    if scheduler.last_epoch != update_count:
+        raise ValueError("Scheduler steps differ from successful optimizer updates")
+    scheduler_steps = scheduler.last_epoch
     peak = torch.cuda.max_memory_allocated() / 2**20 if device.type == "cuda" else None
     # Release optimizer state before loading the selected checkpoint on a small GPU.
     del optimizer, scheduler, model, batch, logits, loss
@@ -296,6 +381,8 @@ def train(args):
         raise ValueError("Reloaded checkpoint does not reproduce selected validation metrics")
     summary = {"smoke": args.smoke, "checkpoint": str(checkpoint.resolve()), "best_epoch": saved["best_epoch"],
                "best_validation_macro_f1": best_f1, "optimizer_updates": update_count,
+               "attempted_updates": attempted_updates, "skipped_updates": attempted_updates - update_count,
+               "scheduler_steps": scheduler_steps, "evaluation_count": len(history),
                "peak_allocated_mb": peak, "total_seconds": time.perf_counter() - started,
                "reload_verified": True, "reloaded_validation": reloaded_metrics}
     write_json(output / "summary.json", summary)

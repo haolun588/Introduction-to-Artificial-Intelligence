@@ -65,8 +65,9 @@ def collect():
     entries = registry["runs"]
     ids = [entry["id"] for entry in entries]
     require(len(ids) == len(set(ids)), "Duplicate experiment IDs")
-    for role in ("validation_reference", "kaggle_candidate", "release_candidate"):
-        require(registry[role] is None or registry[role] in ids, f"Unknown {role}")
+    roles = ("validation_reference", "comparison_control", "kaggle_candidate", "release_candidate")
+    for role in roles:
+        require(registry.get(role) is None or registry[role] in ids, f"Unknown {role}")
     benchmark = read_csv("dataset/benchmark.csv", ["id", "text"])
     benchmark_ids = [row["id"] for row in benchmark]
     require(len(benchmark) == 1000, "Expected 1,000 benchmark rows")
@@ -75,6 +76,27 @@ def collect():
     dataset_hash, split_hash = digest("dataset/dataset.csv"), digest(split_path)
     require(split["dataset_sha256"] == dataset_hash, "Dataset differs from fixed split")
     validation_count = len(split["validation_ids"])
+    confirmation_splits = []
+    if registry.get("confirmation_splits"):
+        dataset_rows = read_csv("dataset/dataset.csv", ["id", "text", "label"])
+        by_id = {r["id"]: r for r in dataset_rows}
+        for entry in registry["confirmation_splits"]:
+            extra = read_json(entry["path"])
+            require(digest(entry["path"]) == entry["sha256"] and extra["seed"] == entry["seed"]
+                    and extra["dataset_sha256"] == dataset_hash, "Confirmation split provenance differs")
+            train_ids, val_ids = extra["train_ids"], extra["validation_ids"]
+            require(len(train_ids) == 8100 and len(val_ids) == 900
+                    and len(set(train_ids + val_ids)) == len(by_id)
+                    and set(train_ids + val_ids) == set(by_id), "Invalid confirmation split partition")
+            train_text = {" ".join(by_id[i]["text"].split()) for i in train_ids}
+            val_text = {" ".join(by_id[i]["text"].split()) for i in val_ids}
+            require(not (train_text & val_text), "Text leakage in confirmation split")
+            for name, part in (("train", train_ids), ("validation", val_ids)):
+                counts = {label: sum(by_id[i]["label"] == label for i in part) for label in LABELS}
+                require(all(counts.values()) and counts == extra["class_counts"][name], "Confirmation class counts differ")
+            confirmation_splits.append({**entry, "train_rows": len(train_ids), "validation_rows": len(val_ids),
+                                        "class_counts": extra["class_counts"],
+                                        "overlap_with_primary_validation": len(set(val_ids) & set(split["validation_ids"]))})
     checkpoint_info, configs, predictions, runs = {}, {}, {}, []
     for entry in entries:
         require(local_path(entry["report"]).is_file(), f"Missing report: {entry['id']}")
@@ -117,6 +139,32 @@ def collect():
                     math.isclose(summary["best_validation_macro_f1"], result["macro_f1"], abs_tol=1e-12),
                     f"Best checkpoint metadata differs: {entry['id']}")
             source_hashes[f"{output}/run_config.json"] = digest(f"{output}/run_config.json")
+            if "eval_interval" in run_config:
+                history = read_json(f"{output}/history.json")
+                expected_epochs = [epoch + fraction for epoch in range(run_config["epochs"])
+                                   for fraction in run_config["evaluation_nominal_fractions"]]
+                require([row["epoch"] for row in history] == expected_epochs, "Evaluation schedule incomplete")
+                require(summary["evaluation_count"] == len(history), "Evaluation count differs")
+                for row in history:
+                    check_metrics(row["train"], len(split["train_ids"]))
+                    check_metrics(row["validation"], validation_count)
+                    require(row["scheduler_steps"] == row["optimizer_updates"]
+                            and row["skipped_updates"] == row["attempted_updates"] - row["optimizer_updates"],
+                            "Optimizer/scheduler counts differ")
+                best = max(history, key=lambda row: row["validation"]["macro_f1"])
+                require(best["epoch"] == config["best_epoch"] and best["validation"] == config["validation"],
+                        "Selected checkpoint differs from earliest best evaluation")
+                require(history[-1]["attempted_updates"] == run_config["optimizer_steps_planned"]
+                        and summary["optimizer_updates"] == history[-1]["optimizer_updates"],
+                        "Training update count incomplete")
+                source_hashes.update({f"{output}/{name}": digest(f"{output}/{name}")
+                                      for name in ("history.json", "curves.png")})
+            for relative, expected in summary.get("recovery_evidence_sha256", {}).items():
+                require(digest(relative) == expected, "Recovered training evidence changed")
+                source_hashes[relative] = expected
+            comparison_path = f"{output}/control_comparison.json"
+            if local_path(comparison_path).exists():
+                source_hashes[comparison_path] = digest(comparison_path)
         else:
             require(entry["kind"] == "ensemble", "Unknown experiment kind")
             # The original learning-rate comparison predates the optional names field.
@@ -151,17 +199,84 @@ def collect():
     for run in runs:
         run["different_predictions_from_kaggle_candidate"] = sum(
             a != b for a, b in zip(predictions[run["id"]], candidate))
+    audits = []
+    for entry in registry.get("audits", []):
+        require(entry["kind"] == "precision", "Unknown audit kind")
+        require(local_path(entry["report"]).is_file(), "Missing audit report")
+        summary_path = f"{entry['output']}/summary.json"
+        summary = read_json(summary_path)
+        require(summary["completed"] and summary["historical_reproduction_passed"], "Incomplete precision audit")
+        require(summary["labels"] == LABELS and summary["validation_ids"] == split["validation_ids"]
+                and summary["benchmark_ids"] == benchmark_ids, "Audit IDs/labels differ")
+        require(summary["source_sha256"]["dataset/dataset.csv"] == dataset_hash
+                and summary["source_sha256"][split_path] == split_hash
+                and summary["source_sha256"]["dataset/benchmark.csv"] == digest("dataset/benchmark.csv"),
+                "Audit data/split differs")
+        require(set(summary["runs"]) == set(entry["run_ids"]), "Audit run IDs differ")
+        for run_id, result in summary["runs"].items():
+            require(run_id in predictions, "Unknown audited candidate")
+            require(result["checkpoint_files_sha256"] == checkpoint_info[result["checkpoint"]]["files_sha256"],
+                    "Audited checkpoint changed")
+            require(result["saved_predictions_sha256"] == digest(result["saved_predictions"]), "Audited CSV changed")
+            for mode in ("amp", "fp32"):
+                check_metrics(result["validation"][mode]["metrics"], validation_count)
+                rows = read_csv(f"{entry['output']}/{run_id}/benchmark/predictions_{mode}.csv", ["id", "pred"])
+                require([r["id"] for r in rows] == benchmark_ids and all(r["pred"] in LABELS for r in rows),
+                        "Audit prediction IDs/labels differ")
+                differences = sum(r["pred"] != old for r, old in zip(rows, predictions[run_id]))
+                require(differences == result["benchmark"]["differences_from_saved_csv"][mode],
+                        "Audit saved CSV comparison differs")
+            require(result["validation"]["amp_reproduces_saved_validation"]
+                    and result["validation"]["amp"]["metrics"]["confusion_matrix"]
+                    == configs[result["checkpoint"]]["validation"]["confusion_matrix"]
+                    and result["benchmark"]["differences_from_saved_csv"]["fp32"] == 0,
+                    "Audit does not reproduce historical results")
+        for relative, expected in summary["artifacts_sha256"].items():
+            require(digest(f"{entry['output']}/{relative}") == expected, "Audit artifact hash differs")
+        audits.append({**entry, "summary_sha256": digest(summary_path),
+                       "results": {k: v for k, v in summary.items()
+                                   if k not in ("validation_ids", "benchmark_ids")}})
+    packages = []
+    for entry in registry.get("package_rehearsals", []):
+        require(entry["run_id"] in predictions and local_path(entry["report"]).is_file(), "Invalid package entry")
+        result = read_json(entry["summary"])
+        require(result["candidate"] == entry["run_id"] and result["clean_environment_verified"]
+                and result["prediction_verified"], "Package rehearsal incomplete")
+        require(digest(result["archive"]) == result["archive_sha256"], "Package ZIP changed")
+        package = result["extracted"]
+        require(digest(f"{package}/package_manifest.json") == result["manifest_sha256"], "Package manifest changed")
+        manifest = read_json(f"{package}/package_manifest.json")
+        require(manifest["candidate"] == entry["run_id"], "Packaged candidate differs")
+        for relative, info in manifest["files"].items():
+            require(digest(f"{package}/{relative}") == info["sha256"], f"Packaged file changed: {relative}")
+        for name, checksum in checkpoint_info[manifest["source_checkpoint"]]["files_sha256"].items():
+            require(manifest["files"][f"saved_models/checkpoint/{name}"]["sha256"] == checksum,
+                    "Packaged checkpoint differs from registered model")
+        require(manifest["files"]["dataset/dataset.csv"]["sha256"] == dataset_hash
+                and manifest["files"]["dataset/benchmark.csv"]["sha256"] == digest("dataset/benchmark.csv")
+                and manifest["files"][split_path]["sha256"] == split_hash, "Packaged data/split differs")
+        rows = read_csv(result["predictions"], ["id", "pred"])
+        require([r["id"] for r in rows] == benchmark_ids
+                and [r["pred"] for r in rows] == predictions[entry["run_id"]], "Packaged predictions differ")
+        require(digest(result["predictions"]) == manifest["reference_predictions_sha256"]
+                == result["predictions_sha256"], "Packaged prediction hash differs")
+        for relative, checksum in result["evidence_sha256"].items():
+            require(digest(relative) == checksum, "Package verification evidence changed")
+        packages.append({**entry, "summary_sha256": digest(entry["summary"]), "results": result})
     code = ["main.py", "src/__init__.py", "src/training.py", "src/eda.py", "src/preprocessing.py",
             "src/model_source.py", "tools/__init__.py", "tools/analyze_ensemble.py", "tools/audit_emoji.py",
+            "tools/audit_precision.py", "tools/refresh_experiments.py",
+            "tools/package_candidate.py", "tools/verify_package.py",
             "requirements.txt", "requirements/train.txt", "requirements/eda.txt", "requirements/lock.txt"]
     return {"schema_version": 1, "reviewed_on": registry["reviewed_on"],
-            "roles": {k: registry[k] for k in ("validation_reference", "kaggle_candidate", "release_candidate")},
+            "roles": {k: registry.get(k) for k in roles},
             "score_provenance": registry["score_provenance"], "registry_sha256": digest(REGISTRY),
             "dataset_sha256": dataset_hash, "benchmark_sha256": digest("dataset/benchmark.csv"),
             "split_sha256": split_hash, "train_rows": len(split["train_ids"]), "validation_rows": validation_count,
             "audit_scope": "File/metadata/CSV checks only; no model inference or platform verification. Current code hashes do not establish original training code provenance.",
             "current_code_sha256": {name: digest(name) for name in code},
-            "checkpoints": checkpoint_info, "runs": runs}
+            "checkpoints": checkpoint_info, "runs": runs, "audits": audits, "package_rehearsals": packages,
+            "confirmation_splits": confirmation_splits}
 
 
 def render(snapshot):
@@ -171,23 +286,41 @@ def render(snapshot):
              "", "| 實驗 | 驗證 Macro-F1 | Kaggle | 與 Kaggle 候選不同筆數 | 決策 |",
              "|---|---:|---:|---:|---|"]
     for run in snapshot["runs"]:
-        score = "待回報" if run["kaggle_macro_f1"] is None else f"{run['kaggle_macro_f1']:.4f}"
+        score = ("未新增提交" if run.get("submission_status") == "duplicate_not_submitted" else "待回報") if run["kaggle_macro_f1"] is None else f"{run['kaggle_macro_f1']:.4f}"
         lines.append(f"| [{run['name']}](../{run['report']}) | {run['validation']['macro_f1']:.2%} | {score} | "
                      f"{run['different_predictions_from_kaggle_candidate']} | {run['decision']} |")
     lines += ["", "## 模型與提交檔", "", "所有路徑相對於 HW3 根目錄；每份 CSV 均核對 1,000 筆、`id,pred`、唯一 ID、原始順序與合法標籤。",
-              "模型檔、tokenizer 與設定逐檔保存 SHA-256；本次為檔案核對，沒有重新執行推論。", "",
+              "模型檔、tokenizer 與設定逐檔保存 SHA-256；總表工具僅核對檔案，另行推論的證據列於下方稽核紀錄。", "",
               "| 實驗 ID | checkpoint | CSV | CSV SHA-256（前 12 碼） |", "|---|---|---|---|"]
     for run in snapshot["runs"]:
         checkpoints = "<br>".join(f"`{p}`" for p in run["checkpoints"])
         lines.append(f"| `{run['id']}` | {checkpoints} | [predictions.csv](../{run['predictions']}) | `{run['predictions_sha256'][:12]}` |")
+    if snapshot["audits"]:
+        lines += ["", "## 推論稽核（不新增訓練候選）", ""]
+        for audit in snapshot["audits"]:
+            lines.append(f"- [{audit['id']}](../{audit['report']})：已完成；歷史驗證與 FP32 提交 CSV 重現通過。")
+            for name, result in audit["results"]["runs"].items():
+                val, bench = result["validation"], result["benchmark"]
+                lines.append(f"  - `{name}`：AMP／FP32 驗證 F1 {val['amp']['metrics']['macro_f1']:.4%}／"
+                             f"{val['fp32']['metrics']['macro_f1']:.4%}；驗證／benchmark 標籤差異 "
+                             f"{val['comparison']['label_disagreements']}／{bench['comparison']['label_disagreements']} 筆。")
+    if snapshot["package_rehearsals"]:
+        lines += ["", "## 候選封裝演練", ""]
+        for package in snapshot["package_rehearsals"]:
+            result = package["results"]
+            lines.append(f"- [{package['run_id']} 獨立封裝](../{package['report']})：新 venv 安裝、乾淨解壓推論通過，"
+                         "1,000 筆與原 CSV 完全相同；此為演練，尚非最終交件。")
+            lines.append(f"- [演練 ZIP](../{result['archive']})；SHA-256 前 12 碼 `{result['archive_sha256'][:12]}`。")
     lines += ["", "## 比較與交件狀態", "",
               f"- 共用固定切分：{snapshot['train_rows']:,} train／{snapshot['validation_rows']:,} validation。",
               f"- 驗證參考：`{snapshot['roles']['validation_reference']}`；Kaggle 候選：`{snapshot['roles']['kaggle_candidate']}`。",
+              f"- 後續新方法共同控制組：`{snapshot['roles']['comparison_control'] or '尚未完成'}`。",
               f"- 最終交件版本：`{snapshot['roles']['release_candidate'] or '尚未指定'}`。",
               "- `saved_models/checkpoint/` 仍是 `baseline`；不要直接把它當成最佳交件模型。",
               "- `ensemble_lr2_lr3/` 是同組模型的初次分析；總表採用帶 CSV 的 `ensemble_lr2_lr3_submission/`，避免重複計數。",
               "- `smoke/` 僅驗證管線，`emoji_audit/`、`emoji_short_audit/` 僅盤點，不列入正式模型比較。",
               "- 相同 Kaggle 分數不代表 CSV 相同；不同筆數以目前 Kaggle 單模型候選為基準。", "",
+              "- 後續確認切分已預先固定：" + ("、".join(f"seed {s['seed']}（{s['train_rows']}／{s['validation_rows']}）" for s in snapshot['confirmation_splits']) or "尚未建立") + "；尚未在額外切分訓練。", "",
               "後續優先順序見 [92% 計畫](Target_92_Plan.md)，操作入口見 [README](../README.md)。", ""]
     return "\n".join(lines)
 

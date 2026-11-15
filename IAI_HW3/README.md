@@ -9,10 +9,11 @@
 | 用途 | 版本 | 已知結果 |
 |---|---|---|
 | 驗證比較基準 | `outputs/weighted_sqrt/checkpoint/` | 固定驗證 Macro-F1 92.65% |
-| Kaggle 單模型候選 | `outputs/weighted_lr3e5/checkpoint/` | 使用者回報 0.9052 |
+| 後續新方法共同控制組 | `outputs/weighted_half_epoch_control/checkpoint/` | 半輪評估已完成；最佳權重／CSV 與舊驗證基準相同 |
+| Kaggle 單模型候選 | `outputs/weighted_quarter/checkpoint/` | 目前最高使用者回報；分數見實驗總表 |
 | 目前預設 checkpoint | `saved_models/checkpoint/` | **早期 baseline，尚未替換成交件版本** |
 
-已完成 7 個完整訓練、2 組集成。Emoji 對照有 CSV，Kaggle 分數待回報。92% 是 Kaggle 目標；驗證分數超過 92% 不代表達標。最終交件版本尚未指定，尚未完成乾淨解壓推論演練。
+已完成 10 個完整訓練、2 組集成。最新 [較溫和類別權重對照](docs/reports/Quarter_Weight_Report.md) 驗證下降但 Kaggle 回報提升，已設為目前首選候選；[分層學習率 B](docs/reports/Layer_LR_Report.md) 已完成，驗證未改善；下一項為 FGSM 的實作與短跑校準。92% 是 Kaggle 目標；驗證分數超過 92% 不代表達標。`weighted_lr3e5` 已完成 [獨立封裝、新環境安裝及乾淨解壓推論演練](docs/reports/Package_Rehearsal_Report.md)，新候選 weighted_quarter 尚未封裝演練；最終交件版本仍未指定。
 
 ## 目錄與閱讀入口
 
@@ -25,7 +26,8 @@ IAI_HW3/
     training.py, eda.py, preprocessing.py
     model_source.py               指定基底的固定雜湊與離線驗證
   tools/                          分析與維護工具
-    analyze_ensemble.py, audit_emoji.py, refresh_experiments.py
+    analyze_ensemble.py, audit_emoji.py, audit_precision.py, refresh_experiments.py
+    package_candidate.py, verify_package.py
   tests/                          切分、訓練、前處理與來源驗證測試
     test_*.py
   requirements/                   依賴清單
@@ -67,12 +69,13 @@ IAI_HW3/
 ```powershell
 .venv/Scripts/python.exe -m tools.analyze_ensemble --help
 .venv/Scripts/python.exe -m tools.audit_emoji --help
+.venv/Scripts/python.exe -m tools.audit_precision --help
 ```
 
 需要用目前 Kaggle 候選重新推論時，**明確指定 checkpoint**；預測檔必須使用尚不存在的路徑：
 
 ```powershell
-.venv/Scripts/python.exe main.py predict --device cuda --checkpoint outputs/weighted_lr3e5/checkpoint --predictions outputs/review_lr3e5/predictions.csv
+.venv/Scripts/python.exe main.py predict --device cuda --checkpoint outputs/weighted_quarter/checkpoint --predictions outputs/review_quarter/predictions.csv
 ```
 
 已有可用 CSV 是 `outputs/weighted_lr3e5/predictions.csv`。提交格式固定為 `id,pred`，依 `dataset/benchmark.csv` 原始 ID 順序輸出 1,000 筆；標籤限 `negative`、`neutral`、`positive`。程式拒絕覆寫既有 CSV 及非空訓練目錄。
@@ -80,10 +83,10 @@ IAI_HW3/
 新對照以新的 run ID 同時指定輸出及 checkpoint，以下只是操作範例，尚未執行：
 
 ```powershell
-.venv/Scripts/python.exe main.py train --device cuda --class-weighting sqrt-inverse --learning-rate 2e-5 --output-dir outputs/weighted_control_v2 --checkpoint outputs/weighted_control_v2/checkpoint
+.venv/Scripts/python.exe main.py train --device cuda --eval-interval 0.5 --class-weighting sqrt-inverse --learning-rate 2e-5 --output-dir outputs/weighted_control_v2 --checkpoint outputs/weighted_control_v2/checkpoint
 ```
 
-此範例仍為現有的每 epoch 評估；計畫中的每半輪評估、分層學習率、較溫和權重及 FGSM 尚未實作。
+每半輪評估已實作並完成一次控制組；上面是操作範例，不是要求再跑相同設定。`--eval-interval` 預設 1.0，相容舊指令；後續新方法明確指定 0.5，評估對齊完整累積窗口並記錄實際進度。較溫和權重 `--class-weighting quarter-inverse` 已實作並完成對照；分層學習率 `--layer-lr-decay 0.9` 已實作並完成對照，預設 1.0 保留均一學習率；FGSM 仍待實作。
 
 ## 環境與固定切分
 
@@ -111,7 +114,7 @@ python -m venv .venv
 
 固定切分位於 `outputs/eda/split.json`：seed 42、8,100／900 筆，按空白正規化文字分組並分層，保存 ID 與資料 SHA-256。後續訓練共用此切分；`train --seed` 只影響訓練。EDA 不相容的資料／參數會被拒絕覆寫，須指定新 `--output-dir`。訓練集長度 P50／P90／P95 = 31／40／43；`max_length=64` 截斷率約 0.02%，採批內動態 padding。
 
-預設訓練為 3 epochs、batch 2／累積 8、AdamW 2e-5、weight decay 0.01、10% warmup／linear decay、未加權 CE。CUDA 預設 FP16 AMP 與梯度檢查點；正式單模型推論目前為 FP32，跨精度差異仍待實測。已完成的加權對照使用 `--class-weighting sqrt-inverse`。
+預設訓練為 3 epochs、batch 2／累積 8、AdamW 2e-5、weight decay 0.01、10% warmup／linear decay、未加權 CE。CUDA 預設 FP16 AMP 與梯度檢查點；正式單模型推論為 FP32。兩個保留候選已完成 [跨精度檢查](docs/reports/Precision_Audit_Report.md)：驗證與 benchmark 標籤均一致，保留現行精度方式。已完成的加權對照使用 `--class-weighting sqrt-inverse`。
 
 短跑使用每類各 16 筆、1 epoch；其 CSV 不作正式提交：
 
@@ -130,5 +133,7 @@ python -m venv .venv
 ```
 
 工具核對既有 metadata、固定切分、混淆矩陣／Macro-F1、完整 checkpoint 檔案雜湊與 CSV 格式，不重新訓練或推論。`snapshot.json` 中目前程式碼的 hash 僅標示盤點時版本，不能證明歷史訓練使用了相同程式碼。只更新 registry 再重建總表，避免在多份文件重複維護完整分數。
+
+候選演練 ZIP、安裝與推論證據由 registry 的 `package_rehearsals` 登錄，總表會連同 hash 核對；重建與包內操作指令見 [封裝報告](docs/reports/Package_Rehearsal_Report.md)。演練不會自動設定 `release_candidate`。
 
 Git 只保存程式、資料、文件、登錄及輕量 snapshot。權重、輸出和 `.venv` 約占 8 GiB，本次完整保留；另行備份模型與 CSV，Git 並不包含它們。交件封裝依 [課程要求與清單](docs/HW3_Work_Plan.md)，不要直接壓縮整個開發工作區。

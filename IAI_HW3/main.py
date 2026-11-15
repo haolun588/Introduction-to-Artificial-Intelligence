@@ -47,10 +47,14 @@ def main() -> None:
     parser.add_argument("--predictions", type=Path)
     parser.add_argument("--device", choices=["auto", "cuda", "cpu"], default="auto")
     parser.add_argument("--epochs", type=int, default=3)
+    parser.add_argument("--eval-interval", type=float, choices=[0.5, 1.0], default=1.0,
+                        help="Evaluate every half or full epoch, aligned to accumulation boundaries")
     parser.add_argument("--batch-size", type=int, default=2)
     parser.add_argument("--accumulation-steps", type=int, default=8)
     parser.add_argument("--learning-rate", type=float, default=2e-5)
-    parser.add_argument("--class-weighting", choices=["none", "sqrt-inverse"], default="none")
+    parser.add_argument("--layer-lr-decay", type=float, default=1.0,
+                        help="BERT learning-rate multiplier per lower layer; 1 keeps uniform LR")
+    parser.add_argument("--class-weighting", choices=["none", "sqrt-inverse", "quarter-inverse"], default="none")
     from src.preprocessing import MODES
     parser.add_argument("--preprocessing", choices=MODES, default="whitespace-v1")
     parser.add_argument("--warmup-ratio", type=float, default=0.1)

@@ -20,10 +20,13 @@
 | 主題 | 報告 |
 |---|---|
 | 基準 | [GPU 短跑](reports/Baseline_Smoke_Report.md)、[完整基準](reports/Baseline_Report.md) |
-| 類別權重 | [反平方根加權 CE](reports/Weighted_CE_Report.md) |
+| 新流程控制組 | [訓練迴圈檢查與半輪評估](reports/Half_Epoch_Control_Report.md) |
+| 類別權重 | [反平方根加權 CE](reports/Weighted_CE_Report.md)、[較溫和 n^-0.25 權重](reports/Quarter_Weight_Report.md) |
 | 前處理 | [URL 正規化](reports/URL_Normalization_Report.md)、[Emoji 盤點](reports/Emoji_Audit_Report.md)、[Emoji 訓練](reports/Emoji_Training_Report.md) |
-| 學習率 | [1e-5](reports/Learning_Rate_Report.md)、[3e-5](reports/Learning_Rate_3e5_Report.md) |
+| 學習率 | [1e-5](reports/Learning_Rate_Report.md)、[3e-5](reports/Learning_Rate_3e5_Report.md)、[分層學習率](reports/Layer_LR_Report.md) |
 | seed 與集成 | [錯判與學習率集成](reports/Ensemble_Error_Analysis_Report.md)、[seed 43](reports/Seed43_Report.md)、[seed 42／43 集成](reports/Seed_Ensemble_Report.md) |
+| 推論一致性 | [AMP／FP32 稽核](reports/Precision_Audit_Report.md)（沿用兩個候選，未新增訓練） |
+| 候選封裝 | [新環境與解壓推論演練](reports/Package_Rehearsal_Report.md)、[包內 README 維護來源](Package_README.md) |
 
 EDA 報告位於本機 [outputs/eda/EDA_Report.md](../outputs/eda/EDA_Report.md)。報告內的重現指令均以 HW3 根目錄為工作目錄；既有輸出路徑不能直接覆寫。
 

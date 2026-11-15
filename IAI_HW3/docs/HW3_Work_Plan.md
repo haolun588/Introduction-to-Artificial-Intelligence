@@ -29,10 +29,10 @@ Kaggle 分數是使用者歷史回報，不能據此保證最終成績。講義�
 
 | 主題 | 已完成 | 尚未做／目前決策 |
 |---|---|---|
-| EDA | 文字群組分層、固定 8,100／900 切分、token 長度盤點 | 保留原切分作比較；額外切分僅用於確認候選 |
+| EDA | 文字群組分層、固定 8,100／900 切分、token 長度盤點；預先固定 seed 142／242 額外切分 | 保留原切分作比較；額外切分尚未訓練，僅用於確認候選 |
 | Data Preprocessing | 空白、URL、emoji 對照 | 保留空白正規化；停止擴大已失敗規則 |
-| Class Imbalance | 未加權與反平方根加權 CE | 加權 2e-5 為驗證基準；較溫和權重待實作 |
-| Model Training | 自訂迴圈、累積、AMP、checkpoint 重載、三個學習率、兩個 seed | 先檢查驗證 AMP／正式推論 FP32 差異 |
+| Class Imbalance | 未加權、反平方根與較溫和 n^-0.25 加權 CE | 維持原驗證基準；較溫和權重驗證下降、Kaggle 回報提升，設為 Kaggle 候選 |
+| Model Training | 自訂迴圈檢查、累積、AMP、checkpoint 重載、學習率／seed 對照；半輪評估控制組完成 | 分層學習率 B 已完成，驗證未改善；保留 AMP 驗證／FP32 推論與半輪選模流程 |
 | Adversarial Training | 尚未實作 | 在新控制組與低成本對照後，才考慮 FGSM |
 | Ensemble Learning | 兩組等權集成與錯判分析 | 尚無超越最佳 Kaggle 的證據；保留單模型候選 |
 
@@ -64,15 +64,19 @@ HW3_{student_id}/
 
 目前開發目錄的 `saved_models/checkpoint/` 仍是 baseline。日後打包時從 registry 指定的最終候選複製到獨立封裝目錄，再以 hash 核對；不要把現有開發目錄直接當成已完成交件包。
 
+2026/11/15 已對 `weighted_lr3e5` 完成 [候選演練包](reports/Package_Rehearsal_Report.md)：ZIP 解壓、新 venv 安裝與離線 GPU 推論通過，1,000 筆 CSV 與原檔相同。這份包未填學號且尚未定為最終版本，以下正式交件項目仍需依選定版本完成。
+
 ## 交件完成條件
 
 - [x] 固定切分、基準、加權對照、完整訓練與預測流程存在。
-- [x] 整理 9 個正式候選的 metadata、checkpoint hash 與 1,000 筆 CSV 對應。
-- [ ] 完成 AMP／FP32 一致性實測並記錄採用的推論方式。
+- [x] 整理 12 個正式候選的 metadata、checkpoint hash 與 1,000 筆 CSV 對應（半輪控制組 CSV 與既有版本相同）。
+- [x] 完成兩個保留候選的 AMP／FP32 一致性實測：標籤均相同，採 FP32 正式單模型推論（[證據](reports/Precision_Audit_Report.md)）；新候選 weighted_quarter 亦已完成驗證集 AMP／FP32 一致性檢查，見 [本輪報告](reports/Quarter_Weight_Report.md)。
+- [x] 原候選 weighted_lr3e5 已完成獨立封裝與乾淨環境推論演練（非正式交件）。
+- [ ] 新候選 weighted_quarter 的獨立封裝與乾淨環境推論演練。
 - [ ] 確定最終模型及對應 Kaggle CSV，在 registry 設定 `release_candidate`。
 - [ ] 在獨立的 `HW3_{student_id}/` 放入選定 checkpoint、必要程式、資料與曲線。
 - [ ] 從乾淨解壓目錄照交件 README 安裝並推論，核對結果與原 CSV。
 - [ ] 核對 ZIP 內容、學號、E3 檔名，以及 Kaggle 選定版本。
 - [ ] 由使用者確認 E3／Kaggle 收到正確版本；記錄回執及時間。
 
-研究目標、流程正確與交件完成分開判定；現階段完成的是實驗與檔案盤點，並非最終交件。
+研究目標、流程正確與交件完成分開判定；現階段完成實驗／檔案盤點、精度核對及候選封裝演練，並非最終交件。

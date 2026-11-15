@@ -3,14 +3,67 @@ import hashlib
 import json
 import tempfile
 import unittest
+import io
+from contextlib import redirect_stdout
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 import torch
 
-from src.training import accumulation_sample_count, class_weights, load_split, metrics, training_loss
+from src.training import (accumulation_sample_count, class_weights, evaluate, evaluation_points,
+                          load_split, metrics, train, training_loss)
 
 
 class TrainingTests(unittest.TestCase):
+    def test_quarter_weights_are_milder_and_sample_normalized(self):
+        counts = torch.tensor([16., 4., 1.])
+        rows = [{"label": label} for label, count in zip(("negative", "neutral", "positive"), (16, 4, 1)) for _ in range(count)]
+        weights = class_weights(rows, "quarter-inverse")
+        torch.testing.assert_close(weights / weights[0], torch.tensor([1., 2**0.5, 2.]))
+        self.assertAlmostEqual(float((weights * counts).sum() / counts.sum()), 1., places=6)
+        strong = class_weights(rows, "sqrt-inverse")
+        self.assertLess(float(weights[-1] / weights[0]), float(strong[-1] / strong[0]))
+        with self.assertRaises(ValueError):
+            class_weights([{"label": "negative"}], "quarter-inverse")
+
+    def test_half_epoch_points_respect_accumulation_and_short_epochs(self):
+        self.assertEqual(evaluation_points(4050, 8, 0.5), {2032: 0.5, 4050: 1.0})
+        self.assertEqual(evaluation_points(7, 2, 0.5), {4: 0.5, 7: 1.0})
+        self.assertEqual(evaluation_points(5, 8, 0.5), {5: 1.0})
+        self.assertEqual(evaluation_points(4050, 8, 1.0), {4050: 1.0})
+        with self.assertRaises(ValueError):
+            evaluation_points(0, 8, 0.5)
+
+    def test_evaluation_preserves_rng_and_mode_even_on_failure(self):
+        class Classifier(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.fail = False
+
+            def forward(self, input_ids):
+                self.assert_eval = not self.training
+                torch.rand(5)  # Deliberately consume RNG to test isolation.
+                if self.fail:
+                    raise RuntimeError("fixture failure")
+                return SimpleNamespace(logits=input_ids)
+
+        model = Classifier().train()
+        batches = [{"input_ids": torch.eye(3), "labels": torch.arange(3)}]
+        rng = torch.get_rng_state().clone()
+        self.assertEqual(evaluate(model, batches, torch.device("cpu"))["macro_f1"], 1.0)
+        self.assertTrue(model.assert_eval and model.training)
+        self.assertTrue(torch.equal(torch.get_rng_state(), rng))
+        model.fail = True
+        with self.assertRaisesRegex(RuntimeError, "fixture failure"):
+            evaluate(model, batches, torch.device("cpu"))
+        self.assertTrue(model.training)
+        self.assertTrue(torch.equal(torch.get_rng_state(), rng))
+        model.fail = False
+        model.eval()
+        evaluate(model, batches, torch.device("cpu"))
+        self.assertFalse(model.training)
+
     def test_class_weights_use_training_counts_and_mean_one(self):
         rows = [{'label': label} for label, count in [('negative', 9), ('neutral', 4), ('positive', 1)] for _ in range(count)]
         weights = class_weights(rows, 'sqrt-inverse')
@@ -83,6 +136,112 @@ class TrainingTests(unittest.TestCase):
             source.write_text(source.read_text() + '\n', encoding='utf-8')
             with self.assertRaisesRegex(ValueError, 'hash'):
                 load_split(directory, split)
+
+
+class TrainingLoopIntegrationTests(unittest.TestCase):
+    def run_fixture(self, root, interval, skip_first=False):
+        """Real tiny dropout training; synthetic tied selection scores; no BERT."""
+        class Classifier(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.dropout = torch.nn.Dropout(0.4)
+                self.linear = torch.nn.Linear(2, 3)
+
+            def forward(self, input_ids):
+                return SimpleNamespace(logits=self.linear(self.dropout(input_ids)))
+
+            def save_pretrained(self, path, **kwargs):
+                torch.save(self.state_dict(), path / "fixture.pt")
+
+        models = []
+        def create_model(*args, **kwargs):
+            model = Classifier()
+            models.append(model)
+            return model
+
+        tokenizer = Mock()
+        def reload_model(path, device):
+            model = Classifier()
+            model.load_state_dict(torch.load(path / "fixture.pt", weights_only=True))
+            return model.eval(), tokenizer, json.loads((path / "training_config.json").read_text())
+
+        labels = ("negative", "neutral", "positive")
+        train_rows = [{"id": str(i), "label": labels[i % 3]} for i in range(11)]
+        val_rows = [{"id": str(i + 100), "label": labels[i % 3]} for i in range(6)]
+        def batches(rows, tokenizer, max_length, batch_size, shuffle=False, seed=42, **kwargs):
+            data = [{"input_ids": torch.tensor([i / 10, 1.0]), "labels": labels.index(r["label"])}
+                    for i, r in enumerate(rows)]
+            result = torch.utils.data.DataLoader(data, batch_size=batch_size, shuffle=shuffle,
+                                                  generator=torch.Generator().manual_seed(seed))
+            result.is_validation = rows is val_rows
+            return result
+
+        def tied_evaluate(model, batches, device, amp=False):
+            result = evaluate(model, batches, device, amp)
+            if batches.is_validation:
+                # Force ties to test retaining the first half-epoch checkpoint.
+                result["macro_f1"] = 0.5
+            return result
+
+        class SkipFirstScaler:
+            def __init__(self, *args, **kwargs):
+                self.attempts, self.value = 0, 2.0
+            def scale(self, loss): return loss
+            def unscale_(self, optimizer): pass
+            def get_scale(self): return self.value
+            def step(self, optimizer):
+                self.attempts += 1
+                if self.attempts > 1: optimizer.step()
+            def update(self):
+                if self.attempts == 1: self.value = 1.0
+
+        root.mkdir()
+        split = root / "split.json"
+        split.write_text("{}")
+        args = SimpleNamespace(epochs=2, eval_interval=interval, batch_size=2, accumulation_steps=3,
+                               max_length=64, learning_rate=0.03, warmup_ratio=0.25, smoke=False,
+                               output_dir=root / "run", checkpoint=root / "checkpoint", base_model=root / "base",
+                               device="cpu", no_amp=True, seed=42, data_dir=root, split=split,
+                               class_weighting="sqrt-inverse", no_gradient_checkpointing=True, preprocessing="whitespace-v1")
+        original_scaler = torch.amp.GradScaler
+        with patch("src.training.verify_base_model", return_value={"directory": str(args.base_model), "model": "fixture", "revision": "fixture"}), \
+                patch("src.training.AutoModelForSequenceClassification.from_pretrained", side_effect=create_model), \
+                patch("src.training.AutoTokenizer.from_pretrained", return_value=tokenizer), \
+                patch("src.training.load_split", return_value=(train_rows, val_rows, {"dataset_sha256": "fixture"})), \
+                patch("src.training.loader", side_effect=batches), patch("src.training.plot_history"), \
+                patch("src.training.load_checkpoint", side_effect=reload_model), \
+                patch("src.training.evaluate", side_effect=tied_evaluate), \
+                patch("src.training.torch.amp.GradScaler", SkipFirstScaler if skip_first else original_scaler), \
+                redirect_stdout(io.StringIO()):
+            train(args)
+        return (models[0].state_dict(),
+                json.loads((args.output_dir / "history.json").read_text()),
+                json.loads((args.output_dir / "summary.json").read_text()))
+
+    def test_mid_epoch_evaluation_does_not_change_training_and_retains_first_best(self):
+        with tempfile.TemporaryDirectory() as folder:
+            full, _, full_summary = self.run_fixture(Path(folder) / "full", 1.0)
+            half, history, summary = self.run_fixture(Path(folder) / "half", 0.5)
+        for name in full:
+            self.assertTrue(torch.equal(full[name], half[name]), name)
+        self.assertEqual([r["epoch"] for r in history], [0.5, 1.0, 1.5, 2.0])
+        self.assertEqual([r["optimizer_updates"] for r in history], [1, 2, 3, 4])
+        self.assertEqual(summary["best_epoch"], 0.5)
+        self.assertEqual(full_summary["best_epoch"], 1.0)
+        self.assertTrue(summary["reload_verified"])
+        self.assertEqual(summary["scheduler_steps"], 4)
+        self.assertEqual(summary["skipped_updates"], 0)
+        self.assertAlmostEqual(history[1]["next_learning_rate"], 0.02)
+        self.assertEqual(history[-1]["next_learning_rate"], 0)
+
+    def test_overflow_skip_does_not_advance_scheduler(self):
+        with tempfile.TemporaryDirectory() as folder:
+            _, history, summary = self.run_fixture(Path(folder) / "skip", 0.5, skip_first=True)
+        self.assertEqual(summary["attempted_updates"], 4)
+        self.assertEqual(summary["optimizer_updates"], 3)
+        self.assertEqual(summary["scheduler_steps"], 3)
+        self.assertEqual(summary["skipped_updates"], 1)
+        self.assertAlmostEqual(history[-1]["next_learning_rate"], 0.01)
 
 
 if __name__ == '__main__':
