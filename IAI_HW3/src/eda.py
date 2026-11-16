@@ -26,9 +26,8 @@ def preprocess(text):
     return " ".join(text.split())
 
 
-def grouped_split(rows, seed=42, validation_fraction=0.1):
-    if not 0 < validation_fraction < 1:
-        raise ValueError("validation fraction must be between 0 and 1")
+def _groups_by_label(rows):
+    """Whitespace-normalized text groups per label; identical text with different labels raises."""
     groups = defaultdict(list)
     for row in rows:
         groups[preprocess(row["text"])].append(row)
@@ -38,6 +37,75 @@ def grouped_split(rows, seed=42, validation_fraction=0.1):
         if len(labels) != 1:
             raise ValueError("Conflicting labels for identical normalized text")
         by_label[next(iter(labels))].append((key, group))
+    return by_label
+
+
+def grouped_kfold(rows, k=5, seed=42):
+    """Return k validation-id sets; same normalized text always lands in one fold.
+
+    Per label: shuffle groups with Random(seed), sort by size descending (stable, so equal
+    sizes keep the shuffled order), then give each group to the fold with the fewest rows of
+    that label (ties -> lowest fold index).
+    """
+    if k < 2:
+        raise ValueError("k must be at least 2")
+    by_label = _groups_by_label(rows)
+    rng = random.Random(seed)
+    folds = [set() for _ in range(k)]
+    for label in LABELS:
+        candidates = by_label[label]
+        rng.shuffle(candidates)
+        candidates.sort(key=lambda item: -len(item[1]))
+        sizes = [0] * k
+        for _, group in candidates:
+            target = min(range(k), key=lambda i: (sizes[i], i))
+            folds[target].update(row["id"] for row in group)
+            sizes[target] += len(group)
+    label_of = {row["id"]: row["label"] for row in rows}
+    for fold in folds:
+        if {label_of[i] for i in fold} != set(LABELS):
+            raise ValueError("Each fold must contain all three labels")
+    return folds
+
+
+def run_kfold(data_dir: Path, output_dir: Path, k: int, seed: int):
+    source = data_dir / "dataset.csv"
+    with source.open(encoding="utf-8-sig", newline="") as stream:
+        rows = list(csv.DictReader(stream))
+    if any(not r["text"].strip() for r in rows):
+        raise ValueError("Blank training text")
+    if output_dir.exists() and any(output_dir.iterdir()):
+        raise ValueError("Output directory already exists and is not empty")
+    folds = grouped_kfold(rows, k, seed)
+    dataset_sha = hashlib.sha256(source.read_bytes()).hexdigest()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    entries = []
+    for i, validation_ids in enumerate(folds):
+        train = [r for r in rows if r["id"] not in validation_ids]
+        validation = [r for r in rows if r["id"] in validation_ids]
+        manifest = {
+            "dataset_sha256": dataset_sha, "seed": seed,
+            "algorithm": "per-label seeded greedy grouped kfold v1",
+            "group_key": "whitespace-normalized text", "fold": i, "k": k,
+            "train_ids": [r["id"] for r in train],
+            "validation_ids": [r["id"] for r in validation],
+            "class_counts": {name: dict(Counter(r["label"] for r in part))
+                             for name, part in (("train", train), ("validation", validation))},
+        }
+        path = output_dir / f"fold{i}.json"
+        path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        entries.append({"fold": i, "file": path.name, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                        "class_counts": manifest["class_counts"]})
+    (output_dir / "folds_manifest.json").write_text(json.dumps(
+        {"k": k, "seed": seed, "dataset_sha256": dataset_sha,
+         "algorithm": "per-label seeded greedy grouped kfold v1", "folds": entries}, indent=2), encoding="utf-8")
+    return entries
+
+
+def grouped_split(rows, seed=42, validation_fraction=0.1):
+    if not 0 < validation_fraction < 1:
+        raise ValueError("validation fraction must be between 0 and 1")
+    by_label = _groups_by_label(rows)
     rng = random.Random(seed)
     validation_keys = set()
     for label in LABELS:

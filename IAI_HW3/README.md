@@ -20,13 +20,13 @@
 ```text
 IAI_HW3/
   AGENTS.md                       工作前必讀規範與收尾檢核表
-  main.py                         inspect / eda / prepare / verify-base / train / predict
+  main.py                         inspect / eda / prepare / verify-base / train / predict / kfold
   requirements.txt                作業指定的依賴入口，轉入 requirements/train.txt
   src/                            核心程式套件
     training.py, eda.py, preprocessing.py
     model_source.py               指定基底的固定雜湊與離線驗證
   tools/                          分析與維護工具
-    analyze_ensemble.py, audit_emoji.py, audit_precision.py, refresh_experiments.py
+    analyze_ensemble.py, audit_emoji.py, audit_precision.py, cv_oof.py, refresh_experiments.py
     package_candidate.py, verify_package.py
   tests/                          切分、訓練、前處理與來源驗證測試
     test_*.py
@@ -115,6 +115,13 @@ python -m venv .venv
 固定切分位於 `outputs/eda/split.json`：seed 42、8,100／900 筆，按空白正規化文字分組並分層，保存 ID 與資料 SHA-256。後續訓練共用此切分；`train --seed` 只影響訓練。EDA 不相容的資料／參數會被拒絕覆寫，須指定新 `--output-dir`。訓練集長度 P50／P90／P95 = 31／40／43；`max_length=64` 截斷率約 0.02%，採批內動態 padding。
 
 預設訓練為 3 epochs、batch 2／累積 8、AdamW 2e-5、weight decay 0.01、10% warmup／linear decay、未加權 CE。CUDA 預設 FP16 AMP 與梯度檢查點；正式單模型推論為 FP32。兩個保留候選已完成 [跨精度檢查](docs/reports/Precision_Audit_Report.md)：驗證與 benchmark 標籤均一致，保留現行精度方式。已完成的加權對照使用 `--class-weighting sqrt-inverse`。
+
+五折交叉驗證入口（切分、五折訓練與 OOF 評估；細節見 [CV 報告](docs/reports/CV5_Sqrt_Report.md)）：
+
+```powershell
+.venv/Scripts/python.exe main.py kfold --k 5 --seed 42 --output-dir outputs/cv5_seed42
+bash tools/run_cv5_sqrt.sh   # 5 次訓練後呼叫 python -m tools.cv_oof 產生 OOF 與集成 CSV
+```
 
 短跑使用每類各 16 筆、1 epoch；其 CSV 不作正式提交：
 

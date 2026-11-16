@@ -59,6 +59,97 @@ def check_metrics(result, expected_count):
             "Macro-F1 does not match confusion matrix")
 
 
+def collect_cross_validations(registry, dataset_hash, benchmark_ids):
+    """Audit registered k-fold CV groups (fold models, OOF metrics, ensemble CSV); files only, no inference."""
+    entries = registry.get("cross_validations", [])
+    ids = [entry["id"] for entry in entries]
+    require(len(ids) == len(set(ids)), "Duplicate cross-validation IDs")
+    if not entries:
+        return []
+    dataset_rows = read_csv("dataset/dataset.csv", ["id", "text", "label"])
+    all_ids = [row["id"] for row in dataset_rows]
+    truth = {row["id"]: row["label"] for row in dataset_rows}
+    model_files = ["config.json", "training_config.json", "model.safetensors",
+                   "tokenizer.json", "tokenizer_config.json", "special_tokens_map.json", "vocab.txt"]
+    results = []
+    for entry in entries:
+        name = entry["id"]
+        require(local_path(entry["report"]).is_file(), f"Missing CV report: {name}")
+        score = entry["kaggle_macro_f1"]
+        require(score is None or 0 <= score <= 1, f"Invalid Kaggle score: {name}")
+        manifest_path = f"{entry['fold_dir']}/folds_manifest.json"
+        manifest = read_json(manifest_path)
+        require(manifest["dataset_sha256"] == dataset_hash, f"CV folds built from another dataset: {name}")
+        require(manifest["k"] == len(manifest["folds"]) == len(entry["folds"]) >= 2, f"Fold count mismatch: {name}")
+        seen_validation, folds = set(), []
+        for fold_entry, listed in zip(entry["folds"], manifest["folds"]):
+            index = fold_entry["fold"]
+            require(index == listed["fold"], f"Fold order differs: {name}")
+            require(fold_entry["split"] == f"{entry['fold_dir']}/{listed['file']}", f"Fold file path differs: {name}/{index}")
+            split_hash = digest(fold_entry["split"])
+            require(split_hash == listed["sha256"], f"Fold file differs from manifest: {name}/{index}")
+            fold = read_json(fold_entry["split"])
+            train_ids, val_ids = fold["train_ids"], fold["validation_ids"]
+            require(fold["dataset_sha256"] == dataset_hash and fold["fold"] == index, f"Fold provenance differs: {name}/{index}")
+            require(not (set(train_ids) & set(val_ids)) and set(train_ids) | set(val_ids) == set(all_ids)
+                    and len(train_ids) + len(val_ids) == len(all_ids), f"Invalid fold partition: {name}/{index}")
+            require(not (seen_validation & set(val_ids)), f"Validation folds overlap: {name}/{index}")
+            seen_validation |= set(val_ids)
+            checkpoint, output = fold_entry["checkpoint"], fold_entry["output"]
+            config = read_json(f"{checkpoint}/training_config.json")
+            require(config["labels"] == LABELS and not config["smoke"],
+                    f"Invalid labels or smoke checkpoint: {checkpoint}")
+            require(config["dataset_sha256"] == dataset_hash and config["split_sha256"] == split_hash,
+                    f"Dataset/split mismatch: {checkpoint}")
+            require(config["train_ids"] == train_ids and config["validation_ids"] == val_ids,
+                    f"Split IDs differ from fold file: {checkpoint}")
+            check_metrics(config["validation"], len(val_ids))
+            model = read_json(f"{checkpoint}/config.json")
+            require(model["id2label"] == {str(i): label for i, label in enumerate(LABELS)},
+                    f"Model labels differ: {checkpoint}")
+            summary = read_json(f"{output}/summary.json")
+            run_config = read_json(f"{output}/run_config.json")
+            require(not run_config["smoke"] and not summary["smoke"], f"Smoke run in CV: {output}")
+            require(all(config.get(k) == v for k, v in run_config.items()),
+                    f"Run/checkpoint configs differ: {output}")
+            result = summary["reloaded_validation"]
+            require(summary["reload_verified"] and result["confusion_matrix"] == config["validation"]["confusion_matrix"],
+                    f"Saved reload verification differs: {output}")
+            require(summary["best_epoch"] == config["best_epoch"] and
+                    math.isclose(summary["best_validation_macro_f1"], result["macro_f1"], abs_tol=1e-12),
+                    f"Best checkpoint metadata differs: {output}")
+            folds.append({**fold_entry, "split_sha256": split_hash, "best_epoch": config["best_epoch"],
+                          "validation_macro_f1": result["macro_f1"], "training_seconds": summary.get("total_seconds"),
+                          "checkpoint_files_sha256": {f: digest(f"{checkpoint}/{f}") for f in model_files},
+                          "summary_sha256": digest(f"{output}/summary.json")})
+        require(seen_validation == set(all_ids), f"Validation folds do not cover the dataset: {name}")
+        metrics_path = f"{entry['oof_output']}/oof_metrics.json"
+        oof = read_json(metrics_path)
+        require(oof["rows"] == len(all_ids) and oof["dataset_sha256"] == dataset_hash and oof["labels"] == LABELS
+                and oof["k"] == manifest["k"], f"OOF metrics provenance differs: {name}")
+        check_metrics(oof["oof"], oof["rows"])
+        require(len(oof["folds"]["per_fold"]) == manifest["k"], f"OOF fold count differs: {name}")
+        predictions_path = f"{entry['oof_output']}/oof_predictions.csv"
+        rows = read_csv(predictions_path, ["id", "label", "pred", "logit_negative", "logit_neutral", "logit_positive"])
+        require([r["id"] for r in rows] == all_ids and all(r["label"] == truth[r["id"]] for r in rows)
+                and all(r["pred"] in LABELS for r in rows), f"OOF prediction IDs/labels differ: {name}")
+        matrix = [[sum(r["label"] == a and r["pred"] == b for r in rows) for b in LABELS] for a in LABELS]
+        require(matrix == oof["oof"]["confusion_matrix"], f"OOF CSV differs from metrics: {name}")
+        submission = entry["submission"]
+        sub_rows = read_csv(submission["path"], ["id", "pred"])
+        require(len(sub_rows) == 1000 and [r["id"] for r in sub_rows] == benchmark_ids
+                and all(r["pred"] in LABELS for r in sub_rows), f"CV submission IDs/labels differ: {name}")
+        require(digest(submission["path"]) == submission["sha256"] == oof["ensemble"]["sha256"],
+                f"CV submission hash differs: {name}")
+        require(1 <= len(oof["ensemble"]["folds"]) <= 3, f"CV ensemble exceeds 3 models: {name}")
+        results.append({**entry, "folds": folds, "oof": oof["oof"], "fold_scores": oof["folds"],
+                        "original_validation_in_oof": oof.get("original_900_validation_ids_in_oof"),
+                        "ensemble_folds": oof["ensemble"]["folds"], "submission_rows": len(sub_rows),
+                        "source_sha256": {metrics_path: digest(metrics_path), predictions_path: digest(predictions_path),
+                                          manifest_path: digest(manifest_path)}})
+    return results
+
+
 def collect():
     registry = read_json(REGISTRY)
     require(registry["schema_version"] == 1, "Unsupported registry version")
@@ -294,9 +385,10 @@ def collect():
                     relative = path.relative_to(ROOT).as_posix()
                     evidence[relative] = digest(relative)
         calibrations.append({**entry, "results": result, "evidence_sha256": evidence})
+    cross_validations = collect_cross_validations(registry, dataset_hash, benchmark_ids)
     code = ["main.py", "src/__init__.py", "src/training.py", "src/eda.py", "src/preprocessing.py",
             "src/model_source.py", "tools/__init__.py", "tools/analyze_ensemble.py", "tools/audit_emoji.py",
-            "tools/audit_precision.py", "tools/refresh_experiments.py", "tools/calibrate_fgsm.py",
+            "tools/audit_precision.py", "tools/cv_oof.py", "tools/refresh_experiments.py", "tools/calibrate_fgsm.py",
             "tools/package_candidate.py", "tools/verify_package.py",
             "requirements.txt", "requirements/train.txt", "requirements/eda.txt", "requirements/lock.txt"]
     return {"schema_version": 1, "reviewed_on": registry["reviewed_on"],
@@ -307,7 +399,8 @@ def collect():
             "audit_scope": "File/metadata/CSV checks only; no model inference or platform verification. Current code hashes do not establish original training code provenance.",
             "current_code_sha256": {name: digest(name) for name in code},
             "checkpoints": checkpoint_info, "runs": runs, "audits": audits, "package_rehearsals": packages,
-            "confirmation_splits": confirmation_splits, "calibrations": calibrations}
+            "confirmation_splits": confirmation_splits, "calibrations": calibrations,
+            "cross_validations": cross_validations}
 
 
 def render(snapshot):
@@ -346,6 +439,16 @@ def render(snapshot):
         lines += ["", "## 方法校準（不列入正式候選）", ""]
         for entry in snapshot["calibrations"]:
             lines.append(f"- [{entry['id']}](../{entry['report']})：訓練資料尺度校準及兩組 smoke 完成；精度差異與限制見報告，尚無完整訓練成效。")
+    for cv in snapshot["cross_validations"]:
+        stats, classes = cv["fold_scores"], cv["oof"]["classes"]
+        total = sum(map(sum, cv["oof"]["confusion_matrix"]))
+        score = "待回報" if cv["kaggle_macro_f1"] is None else f"{cv['kaggle_macro_f1']:.4f}"
+        lines += ["", "## 交叉驗證（OOF；不列入上方單模型比較）", "",
+                  f"- [{cv['name']}](../{cv['report']})：{len(cv['folds'])} 折、{total:,} 筆 OOF；"
+                  f"OOF Macro-F1 **{cv['oof']['macro_f1']:.2%}**，fold 平均 {stats['mean']:.2%} ± {stats['sample_std'] * 100:.2f} 個百分點（樣本標準差）。",
+                  "- 三類 F1：" + "／".join(f"{label} {classes[label]['f1']:.2%}" for label in LABELS) + "。",
+                  f"- 集成 CSV：`{cv['submission']['path']}`（fold {'、'.join(map(str, cv['ensemble_folds']))} 等權；"
+                  f"SHA-256 前 12 碼 `{cv['submission']['sha256'][:12]}`）；提交狀態 `{cv['submission']['submission_status']}`，Kaggle {score}。"]
     lines += ["", "## 比較與交件狀態", "",
               f"- 共用固定切分：{snapshot['train_rows']:,} train／{snapshot['validation_rows']:,} validation。",
               f"- 驗證參考：`{snapshot['roles']['validation_reference']}`；Kaggle 候選：`{snapshot['roles']['kaggle_candidate']}`。",
@@ -375,6 +478,8 @@ def main():
             for relative, content in outputs.items():
                 local_path(relative).write_text(content, encoding="utf-8", newline="\n")
         print(f"Verified {len(snapshot['runs'])} runs, {len(snapshot['checkpoints'])} checkpoints, and all prediction CSVs.")
+        if snapshot["cross_validations"]:
+            print(f"Verified {len(snapshot['cross_validations'])} cross-validation group(s).")
         print("Index is current." if args.check else f"Updated {SNAPSHOT} and {REPORT}.")
     except (OSError, ValueError, KeyError, TypeError) as exc:
         parser.exit(1, f"Audit failed: {exc}\n")

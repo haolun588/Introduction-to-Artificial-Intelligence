@@ -59,6 +59,12 @@
 
 - [fgsm_20261115](../docs/reports/FGSM_Calibration_Report.md)：訓練資料尺度校準及兩組 smoke 完成；精度差異與限制見報告，尚無完整訓練成效。
 
+## 交叉驗證（OOF；不列入上方單模型比較）
+
+- [五折 CV weighted_sqrt](../docs/reports/CV5_Sqrt_Report.md)：5 折、9,000 筆 OOF；OOF Macro-F1 **89.03%**，fold 平均 89.00% ± 1.98 個百分點（樣本標準差）。
+- 三類 F1：negative 96.01%／neutral 80.78%／positive 90.29%。
+- 集成 CSV：`outputs/cv5_sqrt_oof/submissions/cv5_folds012_mean.csv`（fold 0、1、2 等權；SHA-256 前 12 碼 `7037e623cf00`）；提交狀態 `not_submitted`，Kaggle 待回報。
+
 ## 比較與交件狀態
 
 - 共用固定切分：8,100 train／900 validation。

@@ -233,5 +233,53 @@
       "path": "outputs/confirmation_splits/seed242.json",
       "sha256": "a24f2cc762a1396ae5b4b7f3af20d82f96f1fd9e7d3b336d04aa13a302d70f5f"
     }
+  ],
+  "cross_validations": [
+    {
+      "id": "cv5_sqrt",
+      "name": "五折 CV weighted_sqrt",
+      "fold_dir": "outputs/cv5_seed42",
+      "folds": [
+        {
+          "fold": 0,
+          "split": "outputs/cv5_seed42/fold0.json",
+          "output": "outputs/cv5_sqrt/fold0",
+          "checkpoint": "saved_models/cv5_sqrt/fold0"
+        },
+        {
+          "fold": 1,
+          "split": "outputs/cv5_seed42/fold1.json",
+          "output": "outputs/cv5_sqrt/fold1",
+          "checkpoint": "saved_models/cv5_sqrt/fold1"
+        },
+        {
+          "fold": 2,
+          "split": "outputs/cv5_seed42/fold2.json",
+          "output": "outputs/cv5_sqrt/fold2",
+          "checkpoint": "saved_models/cv5_sqrt/fold2"
+        },
+        {
+          "fold": 3,
+          "split": "outputs/cv5_seed42/fold3.json",
+          "output": "outputs/cv5_sqrt/fold3",
+          "checkpoint": "saved_models/cv5_sqrt/fold3"
+        },
+        {
+          "fold": 4,
+          "split": "outputs/cv5_seed42/fold4.json",
+          "output": "outputs/cv5_sqrt/fold4",
+          "checkpoint": "saved_models/cv5_sqrt/fold4"
+        }
+      ],
+      "oof_output": "outputs/cv5_sqrt_oof",
+      "report": "docs/reports/CV5_Sqrt_Report.md",
+      "submission": {
+        "path": "outputs/cv5_sqrt_oof/submissions/cv5_folds012_mean.csv",
+        "sha256": "7037e623cf00017c02c2ec1482a1ae903b61bf2c78a07e1b130e55d4e7d61453",
+        "submission_status": "not_submitted"
+      },
+      "kaggle_macro_f1": null,
+      "decision": "OOF 基準；步驟 3 以相同 5 折比較其他設定"
+    }
   ]
 }
