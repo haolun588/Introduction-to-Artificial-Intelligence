@@ -1,33 +1,237 @@
 {
   "schema_version": 1,
-  "reviewed_on": "2026-11-15",
+  "reviewed_on": "2026-11-16",
   "validation_reference": "weighted_sqrt",
   "comparison_control": "weighted_half_epoch_control",
   "kaggle_candidate": "weighted_quarter",
   "release_candidate": null,
   "score_provenance": "Historical user reports preserved in the linked reports; not independently verified on Kaggle. null means unknown.",
   "runs": [
-    {"id": "baseline", "name": "未加權基準", "kind": "single", "output": "outputs/baseline", "checkpoints": ["saved_models/checkpoint"], "report": "docs/reports/Baseline_Report.md", "kaggle_macro_f1": 0.8973, "decision": "保留基準；預設 checkpoint 仍指向此版本"},
-    {"id": "weighted_sqrt", "name": "加權 2e-5 / seed 42", "kind": "single", "output": "outputs/weighted_sqrt", "checkpoints": ["outputs/weighted_sqrt/checkpoint"], "report": "docs/reports/Weighted_CE_Report.md", "kaggle_macro_f1": 0.9049, "decision": "驗證基準"},
-    {"id": "weighted_url", "name": "URL 正規化", "kind": "single", "output": "outputs/weighted_url", "checkpoints": ["outputs/weighted_url/checkpoint"], "report": "docs/reports/URL_Normalization_Report.md", "kaggle_macro_f1": 0.8977, "decision": "未採用；保留對照"},
-    {"id": "weighted_lr1e5", "name": "加權 1e-5", "kind": "single", "output": "outputs/weighted_lr1e5", "checkpoints": ["outputs/weighted_lr1e5/checkpoint"], "report": "docs/reports/Learning_Rate_Report.md", "kaggle_macro_f1": 0.9012, "decision": "未採用；保留對照"},
-    {"id": "weighted_lr3e5", "name": "加權 3e-5", "kind": "single", "output": "outputs/weighted_lr3e5", "checkpoints": ["outputs/weighted_lr3e5/checkpoint"], "report": "docs/reports/Learning_Rate_3e5_Report.md", "kaggle_macro_f1": 0.9052, "decision": "原 Kaggle 單模型候選；保留已驗證封裝"},
-    {"id": "ensemble_lr2_lr3_submission", "name": "2e-5 / 3e-5 集成", "kind": "ensemble", "output": "outputs/ensemble_lr2_lr3_submission", "checkpoints": ["outputs/weighted_sqrt/checkpoint", "outputs/weighted_lr3e5/checkpoint"], "report": "docs/reports/Ensemble_Error_Analysis_Report.md", "kaggle_macro_f1": 0.9052, "decision": "與原單模型候選同分；保留對照"},
-    {"id": "weighted_seed43", "name": "加權 2e-5 / seed 43", "kind": "single", "output": "outputs/weighted_seed43", "checkpoints": ["outputs/weighted_seed43/checkpoint"], "report": "docs/reports/Seed43_Report.md", "kaggle_macro_f1": 0.8878, "decision": "未採用；保留對照"},
-    {"id": "ensemble_seed42_seed43", "name": "seed 42 / 43 集成", "kind": "ensemble", "output": "outputs/ensemble_seed42_seed43", "checkpoints": ["outputs/weighted_sqrt/checkpoint", "outputs/weighted_seed43/checkpoint"], "report": "docs/reports/Seed_Ensemble_Report.md", "kaggle_macro_f1": 0.8983, "decision": "未採用；保留對照"},
-    {"id": "weighted_emoji", "name": "Emoji 簡短描述", "kind": "single", "output": "outputs/weighted_emoji", "checkpoints": ["outputs/weighted_emoji/checkpoint"], "report": "docs/reports/Emoji_Training_Report.md", "kaggle_macro_f1": 0.9009, "decision": "驗證與 Kaggle 均未改善；保留對照"},
-    {"id": "weighted_half_epoch_control", "name": "半輪評估 / 加權 2e-5 控制組", "kind": "single", "output": "outputs/weighted_half_epoch_control", "checkpoints": ["outputs/weighted_half_epoch_control/checkpoint"], "report": "docs/reports/Half_Epoch_Control_Report.md", "kaggle_macro_f1": null, "submission_status": "duplicate_not_submitted", "decision": "新方法共同控制組；CSV 與 weighted_sqrt 相同，不重複提交"},
-    {"id": "weighted_quarter", "name": "較溫和 n^-0.25 權重", "kind": "single", "output": "outputs/weighted_quarter", "checkpoints": ["outputs/weighted_quarter/checkpoint"], "report": "docs/reports/Quarter_Weight_Report.md", "kaggle_macro_f1": 0.9122, "submission_status": "user_reported", "score_reported_on": "2026-11-15", "score_provenance": "User reported in chat; not independently verified on Kaggle", "decision": "Kaggle 最高分單模型候選；本機驗證下降，跨切分穩定性待確認"},
-    {"id": "weighted_layer_lr", "name": "分層學習率 / decay 0.9", "kind": "single", "output": "outputs/weighted_layer_lr", "checkpoints": ["outputs/weighted_layer_lr/checkpoint"], "report": "docs/reports/Layer_LR_Report.md", "kaggle_macro_f1": 0.8989, "submission_status": "user_reported", "decision": "驗證與 Kaggle 均未改善；保留對照，不擴大 decay 搜尋", "score_reported_on": "2026-11-15", "score_provenance": "User reported in chat; not independently verified on Kaggle"}
+    {
+      "id": "baseline",
+      "name": "未加權基準",
+      "kind": "single",
+      "output": "outputs/baseline",
+      "checkpoints": [
+        "saved_models/checkpoint"
+      ],
+      "report": "docs/reports/Baseline_Report.md",
+      "kaggle_macro_f1": 0.8973,
+      "decision": "保留基準；預設 checkpoint 仍指向此版本"
+    },
+    {
+      "id": "weighted_sqrt",
+      "name": "加權 2e-5 / seed 42",
+      "kind": "single",
+      "output": "outputs/weighted_sqrt",
+      "checkpoints": [
+        "outputs/weighted_sqrt/checkpoint"
+      ],
+      "report": "docs/reports/Weighted_CE_Report.md",
+      "kaggle_macro_f1": 0.9049,
+      "decision": "驗證基準"
+    },
+    {
+      "id": "weighted_url",
+      "name": "URL 正規化",
+      "kind": "single",
+      "output": "outputs/weighted_url",
+      "checkpoints": [
+        "outputs/weighted_url/checkpoint"
+      ],
+      "report": "docs/reports/URL_Normalization_Report.md",
+      "kaggle_macro_f1": 0.8977,
+      "decision": "未採用；保留對照"
+    },
+    {
+      "id": "weighted_lr1e5",
+      "name": "加權 1e-5",
+      "kind": "single",
+      "output": "outputs/weighted_lr1e5",
+      "checkpoints": [
+        "outputs/weighted_lr1e5/checkpoint"
+      ],
+      "report": "docs/reports/Learning_Rate_Report.md",
+      "kaggle_macro_f1": 0.9012,
+      "decision": "未採用；保留對照"
+    },
+    {
+      "id": "weighted_lr3e5",
+      "name": "加權 3e-5",
+      "kind": "single",
+      "output": "outputs/weighted_lr3e5",
+      "checkpoints": [
+        "outputs/weighted_lr3e5/checkpoint"
+      ],
+      "report": "docs/reports/Learning_Rate_3e5_Report.md",
+      "kaggle_macro_f1": 0.9052,
+      "decision": "原 Kaggle 單模型候選；保留已驗證封裝"
+    },
+    {
+      "id": "ensemble_lr2_lr3_submission",
+      "name": "2e-5 / 3e-5 集成",
+      "kind": "ensemble",
+      "output": "outputs/ensemble_lr2_lr3_submission",
+      "checkpoints": [
+        "outputs/weighted_sqrt/checkpoint",
+        "outputs/weighted_lr3e5/checkpoint"
+      ],
+      "report": "docs/reports/Ensemble_Error_Analysis_Report.md",
+      "kaggle_macro_f1": 0.9052,
+      "decision": "與原單模型候選同分；保留對照"
+    },
+    {
+      "id": "weighted_seed43",
+      "name": "加權 2e-5 / seed 43",
+      "kind": "single",
+      "output": "outputs/weighted_seed43",
+      "checkpoints": [
+        "outputs/weighted_seed43/checkpoint"
+      ],
+      "report": "docs/reports/Seed43_Report.md",
+      "kaggle_macro_f1": 0.8878,
+      "decision": "未採用；保留對照"
+    },
+    {
+      "id": "ensemble_seed42_seed43",
+      "name": "seed 42 / 43 集成",
+      "kind": "ensemble",
+      "output": "outputs/ensemble_seed42_seed43",
+      "checkpoints": [
+        "outputs/weighted_sqrt/checkpoint",
+        "outputs/weighted_seed43/checkpoint"
+      ],
+      "report": "docs/reports/Seed_Ensemble_Report.md",
+      "kaggle_macro_f1": 0.8983,
+      "decision": "未採用；保留對照"
+    },
+    {
+      "id": "weighted_emoji",
+      "name": "Emoji 簡短描述",
+      "kind": "single",
+      "output": "outputs/weighted_emoji",
+      "checkpoints": [
+        "outputs/weighted_emoji/checkpoint"
+      ],
+      "report": "docs/reports/Emoji_Training_Report.md",
+      "kaggle_macro_f1": 0.9009,
+      "decision": "驗證與 Kaggle 均未改善；保留對照"
+    },
+    {
+      "id": "weighted_half_epoch_control",
+      "name": "半輪評估 / 加權 2e-5 控制組",
+      "kind": "single",
+      "output": "outputs/weighted_half_epoch_control",
+      "checkpoints": [
+        "outputs/weighted_half_epoch_control/checkpoint"
+      ],
+      "report": "docs/reports/Half_Epoch_Control_Report.md",
+      "kaggle_macro_f1": null,
+      "submission_status": "duplicate_not_submitted",
+      "decision": "新方法共同控制組；CSV 與 weighted_sqrt 相同，不重複提交"
+    },
+    {
+      "id": "weighted_quarter",
+      "name": "較溫和 n^-0.25 權重",
+      "kind": "single",
+      "output": "outputs/weighted_quarter",
+      "checkpoints": [
+        "outputs/weighted_quarter/checkpoint"
+      ],
+      "report": "docs/reports/Quarter_Weight_Report.md",
+      "kaggle_macro_f1": 0.9122,
+      "submission_status": "user_reported",
+      "score_reported_on": "2026-11-15",
+      "score_provenance": "User reported in chat; not independently verified on Kaggle",
+      "decision": "Kaggle 最高分單模型候選；本機驗證下降，跨切分穩定性待確認；訓練報告僅記錄驗證集 AMP／FP32 檢查（標籤差異 0），不屬 precision_audit_20261115，未跑 benchmark AMP"
+    },
+    {
+      "id": "weighted_layer_lr",
+      "name": "分層學習率 / decay 0.9",
+      "kind": "single",
+      "output": "outputs/weighted_layer_lr",
+      "checkpoints": [
+        "outputs/weighted_layer_lr/checkpoint"
+      ],
+      "report": "docs/reports/Layer_LR_Report.md",
+      "kaggle_macro_f1": 0.8989,
+      "submission_status": "user_reported",
+      "decision": "驗證與 Kaggle 均未改善；保留對照，不擴大 decay 搜尋",
+      "score_reported_on": "2026-11-15",
+      "score_provenance": "User reported in chat; not independently verified on Kaggle"
+    },
+    {
+      "id": "weighted_fgsm_low",
+      "name": "FGSM C1 / epsilon 0.00208093",
+      "kind": "single",
+      "output": "outputs/weighted_fgsm_low",
+      "checkpoints": [
+        "outputs/weighted_fgsm_low/checkpoint"
+      ],
+      "report": "docs/reports/FGSM_Low_Report.md",
+      "kaggle_macro_f1": 0.8909,
+      "submission_status": "user_reported",
+      "score_reported_on": "2026-11-16",
+      "score_provenance": "User reported in chat; not independently verified on Kaggle",
+      "decision": "驗證與 Kaggle 回報均未改善；保留對照，未替換候選"
+    },
+    {
+      "id": "weighted_fgsm_high",
+      "name": "FGSM C2 / epsilon 0.00416186",
+      "kind": "single",
+      "output": "outputs/weighted_fgsm_high",
+      "checkpoints": [
+        "outputs/weighted_fgsm_high/checkpoint"
+      ],
+      "report": "docs/reports/FGSM_High_Report.md",
+      "kaggle_macro_f1": 0.9038,
+      "submission_status": "user_reported",
+      "decision": "驗證與 Kaggle 均未超越既有首選；停止本輪 FGSM 搜尋，保留對照",
+      "score_reported_on": "2026-11-16",
+      "score_provenance": "User reported in chat; not independently verified on Kaggle"
+    }
   ],
   "audits": [
-    {"id": "precision_audit_20261115", "kind": "precision", "output": "outputs/precision_audit_20261115", "run_ids": ["weighted_sqrt", "weighted_lr3e5"], "report": "docs/reports/Precision_Audit_Report.md"}
+    {
+      "id": "precision_audit_20261115",
+      "kind": "precision",
+      "output": "outputs/precision_audit_20261115",
+      "run_ids": [
+        "weighted_sqrt",
+        "weighted_lr3e5"
+      ],
+      "report": "docs/reports/Precision_Audit_Report.md"
+    }
   ],
   "package_rehearsals": [
-    {"id": "package_rehearsal_20261115", "run_id": "weighted_lr3e5", "summary": "outputs/package_rehearsal_20261115/summary.json", "report": "docs/reports/Package_Rehearsal_Report.md"}
+    {
+      "id": "package_rehearsal_20261115",
+      "run_id": "weighted_lr3e5",
+      "summary": "outputs/package_rehearsal_20261115/summary.json",
+      "report": "docs/reports/Package_Rehearsal_Report.md"
+    }
+  ],
+  "calibrations": [
+    {
+      "id": "fgsm_20261115",
+      "summary": "outputs/fgsm_precision_diagnostic_20261115/summary.json",
+      "report": "docs/reports/FGSM_Calibration_Report.md",
+      "smoke_outputs": [
+        "outputs/fgsm_smoke_low_20261115",
+        "outputs/fgsm_smoke_high_20261115"
+      ]
+    }
   ],
   "confirmation_splits": [
-    {"seed": 142, "path": "outputs/confirmation_splits/seed142.json", "sha256": "0e8095739a28499f03e5552aa4d807eedbaaf19f7183eabc5afd9a3eb60d34a3"},
-    {"seed": 242, "path": "outputs/confirmation_splits/seed242.json", "sha256": "a24f2cc762a1396ae5b4b7f3af20d82f96f1fd9e7d3b336d04aa13a302d70f5f"}
+    {
+      "seed": 142,
+      "path": "outputs/confirmation_splits/seed142.json",
+      "sha256": "0e8095739a28499f03e5552aa4d807eedbaaf19f7183eabc5afd9a3eb60d34a3"
+    },
+    {
+      "seed": 242,
+      "path": "outputs/confirmation_splits/seed242.json",
+      "sha256": "a24f2cc762a1396ae5b4b7f3af20d82f96f1fd9e7d3b336d04aa13a302d70f5f"
+    }
   ]
 }

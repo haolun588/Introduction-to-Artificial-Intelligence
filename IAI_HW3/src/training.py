@@ -172,6 +172,52 @@ def training_loss(logits, labels, weights, window_samples):
     return F.cross_entropy(logits.float(), labels, weight=weights, reduction="sum") / window_samples
 
 
+def fgsm_delta(gradient, input_ids, attention_mask, special_ids, epsilon):
+    """Per-example word-embedding L-infinity attack; never edit model weights."""
+    if not math.isfinite(epsilon) or epsilon < 0:
+        raise ValueError("FGSM epsilon must be finite and nonnegative")
+    if not torch.isfinite(gradient).all():
+        raise ValueError("Non-finite FGSM embedding gradient")
+    mask = attention_mask.bool().clone()
+    for token_id in special_ids:
+        mask &= input_ids != token_id
+    return (epsilon * gradient.detach().sign() * mask.unsqueeze(-1)).detach()
+
+
+def fgsm_backward(model, batch, labels, weights, window_samples, scaler,
+                  epsilon, special_ids, amp=False, diagnostics=False):
+    """Accumulate 0.5 clean + 0.5 adversarial gradients, with detached attack.
+
+    autograd.grad does not populate parameter .grad; unscale its returned input
+    gradient explicitly. Fresh adversarial embeddings retain the gradient route
+    to the word table after the clean graph has been released.
+    """
+    device_type = labels.device.type
+    inputs = {k: v for k, v in batch.items() if k != "input_ids"}
+    embeddings = model.get_input_embeddings()(batch["input_ids"])
+    with torch.autocast(device_type=device_type, dtype=torch.float16, enabled=amp):
+        clean_logits = model(inputs_embeds=embeddings, **inputs).logits
+        clean_loss = training_loss(clean_logits, labels, weights, window_samples)
+    gradient, = torch.autograd.grad(scaler.scale(clean_loss), embeddings, retain_graph=True)
+    gradient = gradient.float() / scaler.get_scale()
+    delta = fgsm_delta(gradient, batch["input_ids"], batch["attention_mask"], special_ids, epsilon)
+    if not torch.isfinite(clean_loss):
+        raise ValueError("Non-finite clean FGSM loss")
+    scaler.scale(0.5 * clean_loss).backward()
+    with torch.autocast(device_type=device_type, dtype=torch.float16, enabled=amp):
+        adversarial = model.get_input_embeddings()(batch["input_ids"]) + delta
+        adv_logits = model(inputs_embeds=adversarial, **inputs).logits
+        adv_loss = training_loss(adv_logits, labels, weights, window_samples)
+    if not torch.isfinite(adv_loss):
+        raise ValueError("Non-finite adversarial FGSM loss")
+    scaler.scale(0.5 * adv_loss).backward()
+    loss = 0.5 * (clean_loss.detach() + adv_loss.detach())
+    if diagnostics:
+        return loss, {"gradient": gradient.detach(), "delta": delta,
+                      "clean_loss": clean_loss.detach(), "adversarial_loss": adv_loss.detach()}
+    return loss
+
+
 def plot_history(history, path):
     os.environ.setdefault("MPLCONFIGDIR", str(path.parent / ".matplotlib"))
     import matplotlib
@@ -226,6 +272,9 @@ def optimizer_groups(model, learning_rate, layer_decay=1.0):
 
 
 def train(args):
+    fgsm_epsilon = getattr(args, "fgsm_epsilon", 0.0)
+    if not math.isfinite(fgsm_epsilon) or fgsm_epsilon < 0:
+        raise ValueError("FGSM epsilon must be finite and nonnegative")
     layer_decay = getattr(args, "layer_lr_decay", 1.0)
     if not 0 < layer_decay <= 1:
         raise ValueError("Layer LR decay must be in (0, 1]")
@@ -296,6 +345,11 @@ def train(args):
               "evaluation_nominal_fractions": list(eval_points.values()),
               "optimizer_steps_planned": total_steps, "warmup_steps": int(total_steps * args.warmup_ratio),
               "class_weighting": args.class_weighting,
+              "fgsm": {"enabled": fgsm_epsilon > 0, "epsilon": fgsm_epsilon,
+                       "norm": "linf", "space": "word_embeddings_before_position_and_token_type",
+                       "special_token_ids": tokenizer.all_special_ids if fgsm_epsilon > 0 else [],
+                       "mask": "nonpadding and nonspecial tokens", "clean_loss_weight": 0.5,
+                       "adversarial_loss_weight": 0.5, "attack_gradient_detached": True},
               "class_weights": weights.tolist() if weights is not None else None,
               "loss_normalization": "weighted sum / actual accumulation-window sample count; train mean weight 1",
               "evaluation_loss": "unweighted cross entropy for baseline comparison",
@@ -320,14 +374,17 @@ def train(args):
         for index, batch in enumerate(train_batches):
             batch = {k: v.to(device) for k, v in batch.items()}
             labels = batch.pop("labels")
-            with torch.autocast(device_type=device.type, dtype=torch.float16, enabled=amp):
-                logits = model(**batch).logits
-                # Normalize by actual samples, including the final partial accumulation window.
-                loss = training_loss(logits, labels, weights, accumulation_sample_count(
-                    index, args.batch_size, args.accumulation_steps, len(train_rows)))
-            if not torch.isfinite(loss):
-                raise ValueError("Non-finite training loss")
-            scaler.scale(loss).backward()
+            window_samples = accumulation_sample_count(index, args.batch_size, args.accumulation_steps, len(train_rows))
+            if fgsm_epsilon > 0:
+                loss = fgsm_backward(model, batch, labels, weights, window_samples, scaler,
+                                     fgsm_epsilon, tokenizer.all_special_ids, amp)
+            else:
+                with torch.autocast(device_type=device.type, dtype=torch.float16, enabled=amp):
+                    logits = model(**batch).logits
+                    loss = training_loss(logits, labels, weights, window_samples)
+                if not torch.isfinite(loss):
+                    raise ValueError("Non-finite training loss")
+                scaler.scale(loss).backward()
             if (index + 1) % args.accumulation_steps == 0 or index + 1 == len(train_batches):
                 attempted_updates += 1
                 scaler.unscale_(optimizer)
@@ -370,7 +427,9 @@ def train(args):
     scheduler_steps = scheduler.last_epoch
     peak = torch.cuda.max_memory_allocated() / 2**20 if device.type == "cuda" else None
     # Release optimizer state before loading the selected checkpoint on a small GPU.
-    del optimizer, scheduler, model, batch, logits, loss
+    if fgsm_epsilon == 0:
+        del logits
+    del optimizer, scheduler, model, batch, loss
     gc.collect()
     if device.type == "cuda":
         torch.cuda.empty_cache()

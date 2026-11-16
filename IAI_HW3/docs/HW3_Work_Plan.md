@@ -33,7 +33,7 @@ Kaggle 分數是使用者歷史回報，不能據此保證最終成績。講義�
 | Data Preprocessing | 空白、URL、emoji 對照 | 保留空白正規化；停止擴大已失敗規則 |
 | Class Imbalance | 未加權、反平方根與較溫和 n^-0.25 加權 CE | 維持原驗證基準；較溫和權重驗證下降、Kaggle 回報提升，設為 Kaggle 候選 |
 | Model Training | 自訂迴圈檢查、累積、AMP、checkpoint 重載、學習率／seed 對照；半輪評估控制組完成 | 分層學習率 B 已完成，驗證未改善；保留 AMP 驗證／FP32 推論與半輪選模流程 |
-| Adversarial Training | 尚未實作 | 在新控制組與低成本對照後，才考慮 FGSM |
+| Adversarial Training | [FGSM C1／C2 完整訓練與核對](reports/FGSM_High_Report.md) | 兩者驗證未改善，停止本輪 FGSM 搜尋，保留既有候選 |
 | Ensemble Learning | 兩組等權集成與錯判分析 | 尚無超越最佳 Kaggle 的證據；保留單模型候選 |
 
 ## 交件目錄
@@ -69,8 +69,8 @@ HW3_{student_id}/
 ## 交件完成條件
 
 - [x] 固定切分、基準、加權對照、完整訓練與預測流程存在。
-- [x] 整理 12 個正式候選的 metadata、checkpoint hash 與 1,000 筆 CSV 對應（半輪控制組 CSV 與既有版本相同）。
-- [x] 完成兩個保留候選的 AMP／FP32 一致性實測：標籤均相同，採 FP32 正式單模型推論（[證據](reports/Precision_Audit_Report.md)）；新候選 weighted_quarter 亦已完成驗證集 AMP／FP32 一致性檢查，見 [本輪報告](reports/Quarter_Weight_Report.md)。
+- [x] 整理 14 個正式實驗候選的 metadata、checkpoint hash 與 1,000 筆 CSV 對應（半輪控制組 CSV 與既有版本相同）。
+- [x] 完成兩個保留候選的 AMP／FP32 一致性實測：標籤均相同，採 FP32 正式單模型推論（[證據](reports/Precision_Audit_Report.md)）；新候選 weighted_quarter 僅在[訓練報告](reports/Quarter_Weight_Report.md)記錄驗證集 900 筆 AMP／FP32 檢查（標籤差異 0、F1 均 91.9119%）；未跑 benchmark AMP 比較，亦不屬 precision_audit_20261115。
 - [x] 原候選 weighted_lr3e5 已完成獨立封裝與乾淨環境推論演練（非正式交件）。
 - [ ] 新候選 weighted_quarter 的獨立封裝與乾淨環境推論演練。
 - [ ] 確定最終模型及對應 Kaggle CSV，在 registry 設定 `release_candidate`。

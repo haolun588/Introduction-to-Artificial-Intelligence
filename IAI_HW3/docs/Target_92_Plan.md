@@ -1,12 +1,33 @@
 # Kaggle 92% 改進計畫
 
-制定／整理日期：2026/11/14；進度更新：2026/11/15。目標為課程 Kaggle 採計的 Macro-F1 **≥ 0.9200**；目前使用者回報最高 **0.9122**，差 **0.78 個百分點**。這是改進目標，不保證可達成。**P0 稽核與封裝、半輪控制組、確認切分、較溫和權重 A 與分層學習率 B 均已完成；B 驗證與 Kaggle 回報均未改善。下一項為 FGSM C 的實作、梯度檢查與短跑校準。**
+制定：2026/11/14；更新：2026/11/16（新研究路線）。Kaggle 目標 ≥0.9200，目前最高使用者回報 0.9122。A、B、C1、C2 均已完成；FGSM 兩設定驗證均未改善，停止幅度搜尋。下一項為下方「新研究路線」步驟 1（logit 偏移校正）；尚未啟動。
+
+## 新研究路線（2026/11/16 起，取代原第三、四階段）
+
+**動機。** 900 筆驗證集雜訊大：neutral 約 133 筆，幾筆錯判即可改變排名。驗證與 Kaggle 的排序也不一致（已觀察）：weighted_sqrt 驗證 92.65%／Kaggle 0.9049，weighted_quarter 驗證 91.91%／Kaggle 0.9122。因此先讓評估可靠，再找方法。「benchmark 類別比例與訓練不同」目前只是推測，尚無證據。
+
+| 步驟 | 內容 | 要回答的問題 | 進入下一步的判斷 |
+|---|---|---|---|
+| 1 logit 偏移校正（不訓練） | 在 weighted_sqrt、weighted_quarter checkpoint 的 FP32 logits 上計算 logits − τ·log π_train（π 為訓練集類別比例）；τ 取預先固定的網格，只用 900 驗證選 τ；τ=0 必須逐位元重現原 CSV；不依 Kaggle 回饋反覆微調。至多產出 3 份有意義的 CSV，由使用者自行提交 | 類別先驗偏移是否為驗證與 Kaggle 不一致的原因之一 | Kaggle 隨 τ 呈一致方向變化，支持類別比例推測，步驟 2 起把 τ 校正納入固定後處理；否則記錄為無效並繼續 |
+| 2 五折交叉驗證 | 在 9,000 筆上做分層五折（沿用既有文字群組分層邏輯，避免重複文字跨 fold）。以 OOF 9,000 筆 Macro-F1 及三類 F1 為之後所有比較的主要指標，原 900 驗證降為參考。可取 3 個 fold 模型做等權集成（課程上限 3 個模型）；各模型只在其訓練 fold 訓練、在其驗證 fold 選模，符合訓練／驗證切分規定 | 在較低雜訊的指標下，現行設定的真實水準與波動 | 先以 weighted_sqrt 設定建立 CV 基準，基準建立後才進入步驟 3 |
+| 3 用 CV 重比設定 | 用 CV 重比 sqrt 與 quarter 權重，再逐一試 label smoothing、R-Drop（對標籤雜訊較穩健，為假設）。每次只改一個因素 | 哪些改動在 OOF 上有穩定增益 | 看 OOF Macro-F1 差距與各 fold 是否一致，不只看平均 |
+| 4 進階（有條件） | 用 OOF 預測找疑似錯標樣本並降權；僅用訓練集文字做 MLM 續訓（不得使用 benchmark 文字） | 標籤雜訊與領域適應是否還有空間 | 只有步驟 3 找到穩定增益後才考慮 |
+| 不做 | 再跑 FGSM（另有 AMP overflow 會中止訓練的已知缺陷，見 `src/training.py` 的 `fgsm_delta`）；在單一 900 驗證集上繼續調參 | — | — |
+
+**彈性調整規則。** 每步結束先檢視結果再決定下一步；可依證據調換順序、跳過、合併或新增步驟。不設時程與訓練次數上限，但仍遵守課程規則：只用提供資料、只用 bert-base-uncased、集成最多 3 個模型、不用 benchmark 標籤或文字訓練。每次調整都要寫進下方調整紀錄。
+
+**調整紀錄**
+
+| 日期 | 調整 | 原因 |
+|---|---|---|
+| 2026/11/16 | 建立新研究路線，取代原第三、四階段 | 驗證雜訊大且與 Kaggle 排序不一致 |
+| 2026/11/16 | 步驟 1 完成（[報告](reports/Logit_Adjust_Report.md)）：類別先驗推測證據弱，下一步進入步驟 2；τ 校正暫不納入固定後處理 | benchmark 預測比例約 73／13／14%，接近訓練比例；weighted_sqrt 最佳 τ=0；weighted_quarter τ=+0.4 驗證 +0.50 個百分點（約 4 筆，在雜訊內），benchmark 只改 3 筆。sqrt 與 quarter 的 11 筆差異多數不是先驗偏移造成。若使用者回報 τ=+0.4 的 Kaggle 分數有明顯變化再重新評估 |
 
 ## 現況與保留版本
 
-完整分數只維護於 [實驗總表](Experiment_Results.md)，來源為 [registry](../experiments/registry.json) 與各輪原始 summary。已盤點 10 個完整訓練、2 組集成，另有短跑及資料盤點。
+完整分數只維護於 [實驗總表](Experiment_Results.md)，來源為 [registry](../experiments/registry.json) 與各輪原始 summary。已盤點 12 個完整訓練、2 組集成，另有短跑及資料盤點。
 
-保留 `weighted_sqrt` 為驗證基準，`weighted_quarter` 為目前 Kaggle 最高分候選；原候選 `weighted_lr3e5` 與同分集成均保留，新候選尚未封裝演練。`weighted_half_epoch_control` 是後續新方法共同控制組，最佳權重與 CSV 和 `weighted_sqrt` 相同。已建立 [檔案雜湊與候選清單](../experiments/snapshot.json)，對應 12 份 CSV 與 10 份 checkpoint metadata；推論證據見各輪報告。`saved_models/checkpoint/` 仍是早期基準，交件時應從最終候選複製至獨立封裝目錄，不能誤當作最佳模型。
+保留 `weighted_sqrt` 為驗證基準，`weighted_quarter` 為目前 Kaggle 最高分候選；原候選 `weighted_lr3e5` 與同分集成均保留，新候選尚未封裝演練。`weighted_half_epoch_control` 是後續新方法共同控制組，最佳權重與 CSV 和 `weighted_sqrt` 相同。已建立 [檔案雜湊與候選清單](../experiments/snapshot.json)，對應 14 份 CSV 與 12 份 checkpoint metadata；推論證據見各輪報告。`saved_models/checkpoint/` 仍是早期基準，交件時應從最終候選複製至獨立封裝目錄，不能誤當作最佳模型。
 
 既有小範圍學習率搜尋已完成；URL、emoji、另一 seed 與兩組集成都未帶來已知最高分突破。停止擴大這些方向的盲目搜尋。neutral 為最弱類，但 benchmark 無標籤，不能假定 Kaggle 失分也全來自 neutral。0.78 個百分點 Macro-F1 不能直接換算成固定需修正幾筆。
 
@@ -20,14 +41,14 @@
 | P0 已完成 | 先做候選的獨立封裝與解壓推論演練 | 11/15 已完成 `weighted_lr3e5` ZIP、新 venv 安裝與離線推論，原 CSV 完全重現；保留演練包；新候選 weighted_quarter 尚未演練，正式版本／學號仍待定 |
 | P1 已完成 | 分層學習率 B | 驗證整體與三類 F1 均下降；Kaggle 回報亦未改善，保留對照，不擴大 decay 搜尋 |
 | P2 | 有希望的候選做額外切分確認 | 確認泛化方向，避免只迎合目前 900 筆驗證集 |
-| P3 下一項 | FGSM C 的實作與短跑校準 | 實作、梯度／精度驗證成本較高，且沒有本作業的提升證據；最多兩個 epsilon |
+| P3 已完成 | FGSM C1／C2 | 兩者驗證未改善，停止本輪搜尋；C2 Kaggle 回報未超越首選 |
 | 暫停 | 更多 URL／emoji 規則、盲目 seed、集成權重搜尋 | 已做設定未提供突破證據；只有新證據出現才重新打開 |
 
 PyTorch 的 [AMP 文件](https://docs.pytorch.org/docs/2.9/amp.html) 說明 autocast 會按運算選擇精度；這支持檢查兩條路徑，但不證明本模型的預測實際不同。當前判斷不涉及替換指定基底或新增外部訓練資料。
 
 ## 第一階段：確認評估可信，凍結比較方式（11/14–11/15）
 
-**下一個具體工作是第二階段 C：實作 embedding FGSM，先用訓練 batch 檢查擾動 mask、尺度、有限梯度及 AMP／累積縮放，固定最多兩個 epsilon 後才進行正式對照。** 第一階段與設定 A、B 已完成；B 未改善，詳見 [分層學習率報告](reports/Layer_LR_Report.md)。A 的本機三類 F1 均下降，但新的 Kaggle 回報提升，保留為第三階段穩定性確認的考慮對象；目前不追加訓練或權重搜尋，詳見 [較溫和權重報告](reports/Quarter_Weight_Report.md)。兩份確認切分已預先固定但未訓練。控制組中斷後只補收尾驗證，詳見 [半輪控制組報告](reports/Half_Epoch_Control_Report.md)。核心完整訓練預算已完成 **3／9**。
+**（2026/11/16 起，下一項改以上方「新研究路線」為準；weighted_quarter 封裝演練不列為研究優先。）** C1／C2 不進入額外切分確認；預定確認切分仍保留。完整訓練預算已用 **5／9**，詳細結果見 [C2 報告](reports/FGSM_High_Report.md)。
 
 1. **已完成**：在兩個保留 checkpoint 上比較 AMP／FP32 標籤、Macro-F1、機率與 runtime，重現歷史驗證與原提交 CSV。標籤全相同，保留現行精度路徑；若未來候選出現標籤差異，再統一其比較與推論方式。
 2. **已完成檢查**：optimizer／scheduler、梯度累積、加權 loss、checkpoint 選取與 ID／類別對齊未發現需先重跑的既有行為 bug。保留原 optimizer／loss／schedule 策略，補記 AMP skip 與 scheduler 步數；27 項測試通過。
@@ -42,15 +63,17 @@ PyTorch 的 [AMP 文件](https://docs.pytorch.org/docs/2.9/amp.html) 說明 auto
 |---|---|---|---|
 | A 已完成 | 將類別權重由 `n^-0.5` 改為較溫和的 `n^-0.25`，仍正規化為訓練樣本平均權重 1；其餘同控制組 | 本機整體與三類 F1 均下降，Kaggle 回報提升；保留候選，不追加權重搜尋 | 已用 1 個設定 |
 | B 已完成 | AdamW 分層學習率：最上 encoder 層 2e-5，每往下一層乘 0.9，分類 head 2e-5；其餘同控制組 | 本機整體與三類 F1 均下降，未支持改善；Kaggle 回報亦下降，不追加 decay 搜尋 | 已用 1 個設定 |
-| C | 標準 embedding FGSM：`delta = epsilon * sign(grad)`，只擾動非 padding、非特殊 token；clean／adversarial loss 等權平均 | 以局部擾動訓練是否改善錯判與穩定性？ | 2 個 epsilon |
+| C1／C2 已完成 | 兩個預先固定 epsilon 的 FGSM | 兩者整體與三類驗證 F1 均下降，停止幅度搜尋 | 已用 2／2 個設定 |
 
-上述是待驗證假設，不預先承諾哪個會提高 Kaggle。FGSM 的兩個 epsilon 在正式跑分前，用訓練 batch 的 embedding 尺度與梯度檢查決定並寫入 config；不得用 benchmark 回饋選擇擾動幅度。先驗證擾動界限、mask、有限梯度、AMP／累積縮放、乾淨推論，以及不原地永久修改模型權重。每輪都從同一 BERT 基底重新訓練。
+上述是待驗證假設，不預先承諾哪個會提高 Kaggle。FGSM 的兩個 epsilon 已依固定 train 子集（48 筆，每類 16 筆）非 padding／特殊 token 的 word embedding RMS 之 5%／10% 固定並寫入 smoke config，詳細值與精度診斷見校準報告；未使用 benchmark 回饋選擇擾動幅度。擾動界限、mask、有限梯度、AMP／累積縮放、乾淨推論與權重不變性已檢查。每輪仍從同一 BERT 基底重新訓練。註：真實 BERT 的 AMP／FP32 梯度相對 L2 < 2% 數值等價檢查**未通過**（dropout 開啟時在首個 batch 停止；關閉 dropout 的診斷 batch 0 為 5.3756%，`precision_relative_l2_under_2pct=false`，見[校準報告](reports/FGSM_Calibration_Report.md)）；`tests/test_fgsm.py` 的 CUDA 測試（AMP 對 FP32 相對 L2 < 2%）只用 tiny BERT、dropout=0，屬實作正確性檢查，不等於真實 BERT 梯度數值等價。
 
 FGSM 概念依據：[Goodfellow 等，Explaining and Harnessing Adversarial Examples](https://arxiv.org/abs/1412.6572)。論文支持方法來源，不是本作業能改善分數的證據；此處採 embedding 上的適配，須實測。不要將 L2 正規化梯度的 FGM 實作誤標為 FGSM。
 
 以新控制組為基準：Macro-F1 增益 **≥ 0.3 個百分點**為優先確認候選；0–0.3 視為待確認小增益，不稱為突破。這是資源分配門檻，不是統計顯著性。若 neutral 提升但整體下降，記錄權衡，不只報最好看的類別。四個設定均無穩定優勢就停止本輪搜尋，先檢討證據，不自動再加大量參數。
 
 ## 第三階段：確認候選，而非繼續迎合原驗證集（11/19–11/23）
+
+（2026/11/16 起由新研究路線取代，保留原文供對照）
 
 第一階段已預先固定兩份額外的 90／10 分層文字群組切分（seed **142、242**），保存 ID 與 hash 於 registry／snapshot；兩份各為 8,100／900，尚未訓練。只讓第二階段最有希望的一個設定與新控制組各跑兩份，**共 4 次訓練**。兩者使用相同訓練 seed 42、切分、評估頻率及計算預算。
 
@@ -59,6 +82,8 @@ FGSM 概念依據：[Goodfellow 等，Explaining and Harnessing Adversarial Exam
 若第二階段無候選，這四次確認訓練暫不執行；先回顧錯判、規則與預算。不可只因原驗證已超過 92%，就認為 Kaggle 目標完成。
 
 ## 第四階段：有條件集成與最後資料利用（11/23–11/26）
+
+（2026/11/16 起由新研究路線取代，保留原文供對照）
 
 - 只挑經確認的新候選與舊強模型，先在**相同未參與其訓練的樣本**比較互補；試一組預先指定的等權組合，最多三個模型。不平均各模型在自身訓練樣本上的分數，不把不同切分的 checkpoint 當成共用 holdout。
 - 若集成沒有整體提升或誤判仍高度重疊，優先保留單模型；仍可按使用者偏好產生標示清楚的實驗提交檔。
@@ -77,7 +102,7 @@ Kaggle 作為外部結果紀錄，不逐筆猜 benchmark 標籤、不依 leaderb
 
 核心上限：新控制組 1 次＋新設定 4 次＋額外切分確認 4 次＝**9 次完整訓練**；如規則允許，再加 1 次全資料重訓。是否執行後段由前段結果決定。依現有每輪約 17–23 分鐘，普通訓練估 20–30 分鐘、FGSM 粗估 30–50 分鐘，總計約 **4–6 GPU 小時**；這是估算，不含實作、除錯及機器降速，FGSM 需短跑後修正。
 
-目前已完成 **3／9 次**（半輪控制組、較溫和權重 A、分層學習率 B），核心上限剩餘 6 次；不是要求無條件跑滿。B 正常完成三輪及收尾核對，詳見 [B 報告](reports/Layer_LR_Report.md)。下一步為 C 的實作與短跑校準；本輪沒有啟動 FGSM 或額外切分訓練。
+目前已完成 **5／9 次**：共同控制組、A、B、C1、C2。剩餘 4 次確認預算為有條件執行，暫不啟動；先完成目前 Kaggle 候選封裝演練。C2 結果與來源見 [報告](reports/FGSM_High_Report.md)。
 
 達 92% 即停止非必要探索。11/26 前仍未達標則保留最佳已知候選，停止無上限搜尋；11/27–11/29 優先完成乾淨解壓推論、依賴與 checkpoint 打包、CSV hash 對應、學號檔名及 E3／Kaggle 選定版本核對。依現有工作計畫截止為 11/30 23:59，最後交件前再核對平台公告。
 

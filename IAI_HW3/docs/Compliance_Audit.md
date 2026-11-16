@@ -6,13 +6,15 @@
 
 2026/11/15 後續證據：兩個保留候選已完成 [AMP／FP32 實測](reports/Precision_Audit_Report.md)，目前 Kaggle 候選已完成 [獨立封裝、新 venv 安裝與乾淨解壓推論](reports/Package_Rehearsal_Report.md)。兩輪均重現相應原 CSV；`release_candidate` 仍未指定，正式檔名與平台收件尚未核驗。下列 11/14 稽核內容保留當時範圍，最新已完成狀態以這兩份報告及交件清單為準。
 
+**2026-11-16 更新（僅同步事實，未重新判定合規結論）：** 目前 `python tools/refresh_experiments.py --check` 通過，登錄 14 個實驗（12 個單模型、2 組集成）、12 個 checkpoint，14 份預測 CSV 均通過格式核對；registry 另有 1 筆 package_rehearsals（`weighted_lr3e5`，2026/11/15），含 ZIP 與乾淨環境推論演練。11/14 之後新增的實驗（如 weighted_quarter、FGSM C1／C2）未逐項重做本表的合規檢查，其合規狀態為「未核驗」。下表與範圍中標示 11/14 的數字為當時快照；`release_candidate` 仍為 `null`。
+
 **結論：目前未發現明確違反作業禁令的證據；已檢查的資料切分、前處理／訓練流程、曲線與集成規模符合要求。但不能宣告所有成果已完整合規、可直接交件：最終封裝尚未完成，歷史模型／預測來源及平台提交仍有無法由本機檔案獨立證明的部分。**
 
 本次完成的是合規稽核，不是交件完成認證，也不是對未記錄歷史行為的保證。
 
 ## 範圍與方法
 
-- 查核 7 個完整訓練、1 個短跑、2 組集成的 3 份分析輸出，以及 9 份正式候選 CSV。
+- 查核 7 個完整訓練、1 個短跑、2 組集成的 3 份分析輸出，以及 9 份正式候選 CSV（11/14 當時範圍；2026-11-16 登錄為 14 個實驗、12 個 checkpoint、14 份 CSV，新增部分未重新稽核）。
 - 首次稽核沿用既有實驗與當時通過的 13 項測試；當時 6 個功能程式與 3 份依賴檔的 SHA-256 均與 snapshot 相同。後續來源防錯修正另跑相關測試，不能將首次稽核的「程式未變」套用到修正後版本。
 - 補查先前索引未完整覆蓋的內容：原始資料與 Git 的一致性、每輪訓練紀錄與曲線、短跑子集、已保存機率表的集成計算，以及基底模型下載快取 metadata。
 - `python tools/refresh_experiments.py --check` 本次通過。另以只讀 Python 檢查產生 [機器可讀證據](../outputs/workspace_audit/compliance_2026-11-14.json)；該 JSON 位於本機忽略目錄，不包含於 Git。
@@ -28,9 +30,9 @@
 | 自訂前處理與訓練管線（第 9 頁） | 已檢查實作符合 | [preprocessing.py](../src/preprocessing.py) 提供版本化空白、URL、emoji 處理；[training.py](../src/training.py) 自行組合 Dataset／DataLoader、forward／backward、梯度累積、optimizer／scheduler、驗證、選模及推論。EDA 長度統計與類別權重使用訓練子集。 |
 | 每 epoch 保存訓練／驗證曲線（第 9 頁） | 通過 | 7 輪完整訓練各有連續 3 epochs；短跑有 1 epoch，共 22 份 epoch 紀錄。每份兩側 loss 為有限值，Macro-F1 可由其混淆矩陣重算，樣本數正確；8 份 `curves.png` 均存在且為可讀 PNG。 |
 | 集成不超過 3 個模型（第 9 頁） | 通過 | 兩組集成各使用 2 個 checkpoint，權重均為 0.5／0.5。3 份已保存的 900 筆驗證機率表均通過 ID／原文／標籤、機率平均、argmax、混淆矩陣與 Macro-F1 核對。初次學習率分析及其提交版屬同一組集成，不算新增模型。 |
-| 禁止偽造模型預測（第 14 頁） | 未見偽造證據；歷史 CSV 尚未逐份重現 | 單模型 CSV 由 logits argmax、集成 CSV 由平均機率 argmax 產生；9 份候選 CSV 的 1,000 筆、欄名、ID、順序、標籤與登錄 hash 均通過。本次未由模型重新生成 benchmark CSV，因此不能只憑 hash 排除建檔前曾有人手改。 |
+| 禁止偽造模型預測（第 14 頁） | 未見偽造證據；歷史 CSV 尚未逐份重現 | 單模型 CSV 由 logits argmax、集成 CSV 由平均機率 argmax 產生；9 份候選 CSV 的 1,000 筆、欄名、ID、順序、標籤與登錄 hash 均通過（11/14 當時；2026-11-16 `--check` 對 14 份 CSV 的格式與 hash 核對通過，但不含模型重新推論）。本次未由模型重新生成 benchmark CSV，因此不能只憑 hash 排除建檔前曾有人手改。 |
 | 禁止抄襲（第 14 頁） | 無法僅以本機稽核認證 | 未發現可據以判定抄襲的證據，但本機檔案與測試不能獨立證明完整創作來源；不能寫成「已證實完全原創」。 |
-| 助教可執行、指定封裝結構及 ZIP 檔名（第 8、11、13–14 頁） | 尚未完成 | 必要功能程式、資料與 checkpoint 已存在，但 `release_candidate` 為 `null`；HW3 根目錄未發現交件 ZIP 或 `HW3_{student_id}/` 封裝目錄，未有乾淨解壓執行通過的紀錄。 |
+| 助教可執行、指定封裝結構及 ZIP 檔名（第 8、11、13–14 頁） | 尚未完成 | 必要功能程式、資料與 checkpoint 已存在，但 `release_candidate` 為 `null`；HW3 根目錄未發現交件 ZIP 或 `HW3_{student_id}/` 封裝目錄，未有乾淨解壓執行通過的紀錄（11/14 當時；2026-11-16 更新：registry 已有 `weighted_lr3e5` 的 11/15 封裝演練與乾淨解壓推論紀錄，但屬演練、非最終交件，`release_candidate` 仍為 `null`，正式 `HW3_{student_id}/` 封裝與 ZIP 檔名仍未完成）。 |
 | Kaggle／E3 身分、頻率、截止與收件（第 7–8、15 頁） | 尚未核驗 | 只有歷史使用者回報分數；沒有完整提交時間戳、隊名／email、選定提交或 E3 收件證據。不能從 9 份 CSV 推斷提交次數或違反每 24 小時 3 次上限。截止與後續公告需於交件前核對平台。 |
 
 ## 已辨識的缺口與處理順序

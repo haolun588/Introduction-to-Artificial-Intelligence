@@ -263,9 +263,40 @@ def collect():
         for relative, checksum in result["evidence_sha256"].items():
             require(digest(relative) == checksum, "Package verification evidence changed")
         packages.append({**entry, "summary_sha256": digest(entry["summary"]), "results": result})
+    calibrations = []
+    for entry in registry.get("calibrations", []):
+        result = read_json(entry["summary"])
+        require(local_path(entry["report"]).is_file(), "Missing calibration report")
+        require(result["completed"] and result["clean_inference_unchanged"]
+                and result["optimizer_updates"] == 0, "Incomplete calibration audit")
+        require(result["dataset_sha256"] == dataset_hash and result["split_sha256"] == split_hash,
+                "Calibration data/split differs")
+        require(set(result["scale_train_ids"] + result["audit_train_ids"]).issubset(split["train_ids"]),
+                "Calibration must use only training rows")
+        require(len(entry["smoke_outputs"]) == len(result["epsilons"]) <= 2, "Calibration budget mismatch")
+        evidence = {entry["summary"]: digest(entry["summary"])}
+        for output, epsilon in zip(entry["smoke_outputs"], result["epsilons"]):
+            config, summary = read_json(f"{output}/run_config.json"), read_json(f"{output}/summary.json")
+            require(config["smoke"] and summary["smoke"] and summary["reload_verified"], "Incomplete smoke run")
+            require(config["fgsm"]["epsilon"] == epsilon and config["split_sha256"] == split_hash,
+                    "Smoke epsilon/split differs from calibration")
+            require(summary["optimizer_updates"] == summary["scheduler_steps"] > 0
+                    and summary["skipped_updates"] == 0, "Unexpected smoke optimizer updates")
+            files = [local_path(f"{output}/{name}") for name in
+                     ("run_config.json", "summary.json", "history.json", "curves.png", "environment.json", "split.json")]
+            require(all(path.is_file() for path in files), "Missing smoke evidence")
+            require(all(local_path(f"{output}/checkpoint/{name}").is_file() for name in
+                        ("model.safetensors", "config.json", "training_config.json", "tokenizer.json")),
+                    "Missing smoke checkpoint")
+            files += sorted(local_path(f"{output}/checkpoint").glob("*"))
+            for path in files:
+                if path.is_file():
+                    relative = path.relative_to(ROOT).as_posix()
+                    evidence[relative] = digest(relative)
+        calibrations.append({**entry, "results": result, "evidence_sha256": evidence})
     code = ["main.py", "src/__init__.py", "src/training.py", "src/eda.py", "src/preprocessing.py",
             "src/model_source.py", "tools/__init__.py", "tools/analyze_ensemble.py", "tools/audit_emoji.py",
-            "tools/audit_precision.py", "tools/refresh_experiments.py",
+            "tools/audit_precision.py", "tools/refresh_experiments.py", "tools/calibrate_fgsm.py",
             "tools/package_candidate.py", "tools/verify_package.py",
             "requirements.txt", "requirements/train.txt", "requirements/eda.txt", "requirements/lock.txt"]
     return {"schema_version": 1, "reviewed_on": registry["reviewed_on"],
@@ -276,7 +307,7 @@ def collect():
             "audit_scope": "File/metadata/CSV checks only; no model inference or platform verification. Current code hashes do not establish original training code provenance.",
             "current_code_sha256": {name: digest(name) for name in code},
             "checkpoints": checkpoint_info, "runs": runs, "audits": audits, "package_rehearsals": packages,
-            "confirmation_splits": confirmation_splits}
+            "confirmation_splits": confirmation_splits, "calibrations": calibrations}
 
 
 def render(snapshot):
@@ -311,6 +342,10 @@ def render(snapshot):
             lines.append(f"- [{package['run_id']} 獨立封裝](../{package['report']})：新 venv 安裝、乾淨解壓推論通過，"
                          "1,000 筆與原 CSV 完全相同；此為演練，尚非最終交件。")
             lines.append(f"- [演練 ZIP](../{result['archive']})；SHA-256 前 12 碼 `{result['archive_sha256'][:12]}`。")
+    if snapshot["calibrations"]:
+        lines += ["", "## 方法校準（不列入正式候選）", ""]
+        for entry in snapshot["calibrations"]:
+            lines.append(f"- [{entry['id']}](../{entry['report']})：訓練資料尺度校準及兩組 smoke 完成；精度差異與限制見報告，尚無完整訓練成效。")
     lines += ["", "## 比較與交件狀態", "",
               f"- 共用固定切分：{snapshot['train_rows']:,} train／{snapshot['validation_rows']:,} validation。",
               f"- 驗證參考：`{snapshot['roles']['validation_reference']}`；Kaggle 候選：`{snapshot['roles']['kaggle_candidate']}`。",

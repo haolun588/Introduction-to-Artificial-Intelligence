@@ -17,8 +17,10 @@
 | [seed 42 / 43 集成](../docs/reports/Seed_Ensemble_Report.md) | 92.46% | 0.8983 | 17 | 未採用；保留對照 |
 | [Emoji 簡短描述](../docs/reports/Emoji_Training_Report.md) | 91.68% | 0.9009 | 17 | 驗證與 Kaggle 均未改善；保留對照 |
 | [半輪評估 / 加權 2e-5 控制組](../docs/reports/Half_Epoch_Control_Report.md) | 92.65% | 未新增提交 | 11 | 新方法共同控制組；CSV 與 weighted_sqrt 相同，不重複提交 |
-| [較溫和 n^-0.25 權重](../docs/reports/Quarter_Weight_Report.md) | 91.91% | 0.9122 | 0 | Kaggle 最高分單模型候選；本機驗證下降，跨切分穩定性待確認 |
+| [較溫和 n^-0.25 權重](../docs/reports/Quarter_Weight_Report.md) | 91.91% | 0.9122 | 0 | Kaggle 最高分單模型候選；本機驗證下降，跨切分穩定性待確認；訓練報告僅記錄驗證集 AMP／FP32 檢查（標籤差異 0），不屬 precision_audit_20261115，未跑 benchmark AMP |
 | [分層學習率 / decay 0.9](../docs/reports/Layer_LR_Report.md) | 92.03% | 0.8989 | 21 | 驗證與 Kaggle 均未改善；保留對照，不擴大 decay 搜尋 |
+| [FGSM C1 / epsilon 0.00208093](../docs/reports/FGSM_Low_Report.md) | 91.73% | 0.8909 | 40 | 驗證與 Kaggle 回報均未改善；保留對照，未替換候選 |
+| [FGSM C2 / epsilon 0.00416186](../docs/reports/FGSM_High_Report.md) | 90.92% | 0.9038 | 40 | 驗證與 Kaggle 均未超越既有首選；停止本輪 FGSM 搜尋，保留對照 |
 
 ## 模型與提交檔
 
@@ -39,6 +41,8 @@
 | `weighted_half_epoch_control` | `outputs/weighted_half_epoch_control/checkpoint` | [predictions.csv](../outputs/weighted_half_epoch_control/predictions.csv) | `7330b4e257aa` |
 | `weighted_quarter` | `outputs/weighted_quarter/checkpoint` | [predictions.csv](../outputs/weighted_quarter/predictions.csv) | `800684403958` |
 | `weighted_layer_lr` | `outputs/weighted_layer_lr/checkpoint` | [predictions.csv](../outputs/weighted_layer_lr/predictions.csv) | `47c39add40d1` |
+| `weighted_fgsm_low` | `outputs/weighted_fgsm_low/checkpoint` | [predictions.csv](../outputs/weighted_fgsm_low/predictions.csv) | `fe1d1640ccfb` |
+| `weighted_fgsm_high` | `outputs/weighted_fgsm_high/checkpoint` | [predictions.csv](../outputs/weighted_fgsm_high/predictions.csv) | `dd1fcd7f2396` |
 
 ## 推論稽核（不新增訓練候選）
 
@@ -50,6 +54,10 @@
 
 - [weighted_lr3e5 獨立封裝](../docs/reports/Package_Rehearsal_Report.md)：新 venv 安裝、乾淨解壓推論通過，1,000 筆與原 CSV 完全相同；此為演練，尚非最終交件。
 - [演練 ZIP](../outputs/package_rehearsal_20261115/build/HW3_rehearsal_weighted_lr3e5.zip)；SHA-256 前 12 碼 `6e7476cda021`。
+
+## 方法校準（不列入正式候選）
+
+- [fgsm_20261115](../docs/reports/FGSM_Calibration_Report.md)：訓練資料尺度校準及兩組 smoke 完成；精度差異與限制見報告，尚無完整訓練成效。
 
 ## 比較與交件狀態
 

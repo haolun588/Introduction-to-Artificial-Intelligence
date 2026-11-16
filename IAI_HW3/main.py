@@ -55,6 +55,8 @@ def main() -> None:
     parser.add_argument("--layer-lr-decay", type=float, default=1.0,
                         help="BERT learning-rate multiplier per lower layer; 1 keeps uniform LR")
     parser.add_argument("--class-weighting", choices=["none", "sqrt-inverse", "quarter-inverse"], default="none")
+    parser.add_argument("--fgsm-epsilon", type=float, default=0.0,
+                        help="Word-embedding FGSM L-infinity radius; 0 disables adversarial training")
     from src.preprocessing import MODES
     parser.add_argument("--preprocessing", choices=MODES, default="whitespace-v1")
     parser.add_argument("--warmup-ratio", type=float, default=0.1)

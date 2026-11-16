@@ -13,7 +13,7 @@
 | Kaggle 單模型候選 | `outputs/weighted_quarter/checkpoint/` | 目前最高使用者回報；分數見實驗總表 |
 | 目前預設 checkpoint | `saved_models/checkpoint/` | **早期 baseline，尚未替換成交件版本** |
 
-已完成 10 個完整訓練、2 組集成。最新 [較溫和類別權重對照](docs/reports/Quarter_Weight_Report.md) 驗證下降但 Kaggle 回報提升，已設為目前首選候選；[分層學習率 B](docs/reports/Layer_LR_Report.md) 已完成，驗證未改善；下一項為 FGSM 的實作與短跑校準。92% 是 Kaggle 目標；驗證分數超過 92% 不代表達標。`weighted_lr3e5` 已完成 [獨立封裝、新環境安裝及乾淨解壓推論演練](docs/reports/Package_Rehearsal_Report.md)，新候選 weighted_quarter 尚未封裝演練；最終交件版本仍未指定。
+已完成 12 個完整訓練、2 組集成。[FGSM C2](docs/reports/FGSM_High_Report.md) 驗證未改善，Kaggle 回報亦未超越首選，保留對照 CSV；停止本輪 FGSM 搜尋，保留 weighted_quarter 為首選。下一項為 weighted_quarter 的獨立封裝與乾淨環境推論演練；尚未啟動。
 
 ## 目錄與閱讀入口
 
@@ -78,7 +78,7 @@ IAI_HW3/
 .venv/Scripts/python.exe main.py predict --device cuda --checkpoint outputs/weighted_quarter/checkpoint --predictions outputs/review_quarter/predictions.csv
 ```
 
-已有可用 CSV 是 `outputs/weighted_lr3e5/predictions.csv`。提交格式固定為 `id,pred`，依 `dataset/benchmark.csv` 原始 ID 順序輸出 1,000 筆；標籤限 `negative`、`neutral`、`positive`。程式拒絕覆寫既有 CSV 及非空訓練目錄。
+目前首選 CSV 是 `outputs/weighted_quarter/predictions.csv`；最新探索檔為 [FGSM C2 CSV](outputs/weighted_fgsm_high/predictions.csv)。提交格式固定為 `id,pred`，依 `dataset/benchmark.csv` 原始 ID 順序輸出 1,000 筆；標籤限 `negative`、`neutral`、`positive`。程式拒絕覆寫既有 CSV 及非空訓練目錄。
 
 新對照以新的 run ID 同時指定輸出及 checkpoint，以下只是操作範例，尚未執行：
 
@@ -86,7 +86,7 @@ IAI_HW3/
 .venv/Scripts/python.exe main.py train --device cuda --eval-interval 0.5 --class-weighting sqrt-inverse --learning-rate 2e-5 --output-dir outputs/weighted_control_v2 --checkpoint outputs/weighted_control_v2/checkpoint
 ```
 
-每半輪評估已實作並完成一次控制組；上面是操作範例，不是要求再跑相同設定。`--eval-interval` 預設 1.0，相容舊指令；後續新方法明確指定 0.5，評估對齊完整累積窗口並記錄實際進度。較溫和權重 `--class-weighting quarter-inverse` 已實作並完成對照；分層學習率 `--layer-lr-decay 0.9` 已實作並完成對照，預設 1.0 保留均一學習率；FGSM 仍待實作。
+每半輪評估已實作並完成一次控制組；上面是操作範例，不是要求再跑相同設定。`--eval-interval` 預設 1.0，相容舊指令；後續新方法明確指定 0.5，評估對齊完整累積窗口並記錄實際進度。較溫和權重 `--class-weighting quarter-inverse` 已實作並完成對照；分層學習率 `--layer-lr-decay 0.9` 已實作並完成對照，預設 1.0 保留均一學習率。FGSM 以 `--fgsm-epsilon` 開啟，預設 0 保留原流程；尺度與短跑見 [校準報告](docs/reports/FGSM_Calibration_Report.md)，最新結果與停止搜尋決策見 [C2 報告](docs/reports/FGSM_High_Report.md)。
 
 ## 環境與固定切分
 
