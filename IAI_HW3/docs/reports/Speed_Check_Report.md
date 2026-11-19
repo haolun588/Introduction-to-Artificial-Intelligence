@@ -63,6 +63,8 @@ M-C 的 train MLM loss 與 M-A 完全相同（2.894016），但 peak reserved 4,
 | `TEMP_C`／`CLK_MHZ` | 87／1200（各 180 秒） | 與舊版相同。 |
 | 速度 | 以「有效時間」計：視窗 `WIN_SEC=120`、完整視窗＝有效時間跨度 ≥ 0.8×`WIN_SEC`；每 stage 取前 3 個完整視窗（取樣間隔有效時間 `WIN_SEC`/2）速率中位數為基準；< 0.5 倍異常、≥ 0.6 倍恢復；基準前低於 `MIN_SPM=500` 也算異常 | 不同設定的速度差 4 倍以上，固定門檻不可行；C 設定每 epoch 訓練段約 190 秒、E 設定 5 epoch 訓練共約 6 分鐘，舊的 300 秒視窗約 13 分鐘才有基準，故縮為 120 秒。評估期間（出現 `Epoch E: train F1=`／`train MLM=` 摘要行）的行間隔，有效時間改記為上一個正常間隔，不把評估時間算進速率；不再用固定間隔清空視窗（舊 `GAP_RESET=90` 在速率低於約 267 樣本/分鐘時每次都清空而漏報嚴重變慢），完全沒有新行交給 `STALL_SEC`。監控只判斷啟動之後新增的 log 內容（記錄啟動時檔案大小），不受追加式 log 的舊 run 影響。 |
 
+**已於 2026/11/19 採用為預設**：`train` 評估 batch 預設 64（`--eval-batch-size` 未指定時）；`train` 與 `pretrain-mlm` 的 gradient checkpointing 預設關閉（以 `--gradient-checkpointing` 開啟，舊的 `--no-gradient-checkpointing` 仍可用）；`pretrain-mlm` 評估 batch 仍沿用 `--batch-size`，未採用 64。batch 8／16 非等價，未採用。
+
 ## 沿用成果、未完成與限制
 
 - 沿用：既有 8,100／900 切分、`sqrt-inverse` 權重、`main.py train`／`pretrain-mlm`；新增程式僅 `--eval-batch-size` 與計時／記憶體欄位（預設不指定時行為不變）。`tools/cv_oof.py` 的 OOF 推論 batch 未更動。

@@ -24,7 +24,7 @@ from transformers import (AutoModelForMaskedLM, AutoTokenizer, DataCollatorForLa
                           get_linear_schedule_with_warmup)
 
 from .model_source import file_sha256, verify_base_model
-from .training import (ROOT, TextDataset, choose_device, load_split, smoke_subset, sync_cuda, write_json)
+from .training import (ROOT, TextDataset, choose_device, gradient_checkpointing_enabled, load_split, smoke_subset, sync_cuda, write_json)
 
 MLM_CODE_FILES = ("main.py", "src/__init__.py", "src/training.py", "src/eda.py", "src/preprocessing.py",
                   "src/model_source.py", "src/mlm.py")
@@ -140,7 +140,8 @@ def pretrain_mlm(args):
                                               trust_remote_code=False)
     model = AutoModelForMaskedLM.from_pretrained(base_source["directory"], local_files_only=True,
                                                  use_safetensors=True, trust_remote_code=False).to(device)
-    if not args.no_gradient_checkpointing:
+    use_checkpointing = gradient_checkpointing_enabled(args)
+    if use_checkpointing:
         model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
     collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=True, mlm_probability=args.mask_prob)
     train_batches = collate_rows(train_rows, tokenizer, args.max_length, args.batch_size, collator,
@@ -166,7 +167,7 @@ def pretrain_mlm(args):
               "masking": "80/10/10 DataCollatorForLanguageModeling, special tokens never masked",
               "warmup_ratio": args.warmup_ratio, "warmup_steps": warmup_steps, "weight_decay": args.weight_decay,
               "optimizer_steps_planned": total_steps, "amp": amp,
-              "gradient_checkpointing": not args.no_gradient_checkpointing, "smoke": args.smoke,
+              "gradient_checkpointing": use_checkpointing, "smoke": args.smoke,
               "model_selection": "none; final-epoch weights are saved",
               "mlm_corpus": mlm_corpus,
               "validation_use": ("fixed-mask MLM eval loss only (no gradient)" if mlm_corpus == "split-train"

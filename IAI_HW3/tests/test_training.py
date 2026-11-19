@@ -284,13 +284,14 @@ class TrainingLoopIntegrationTests(unittest.TestCase):
         self.assertAlmostEqual(history[1]["next_learning_rate"], 0.02)
         self.assertEqual(history[-1]["next_learning_rate"], 0)
 
-    def test_eval_batch_size_defaults_to_batch_size(self):
+    def test_eval_batch_size_defaults_to_64_for_evaluation_loaders_only(self):
         with tempfile.TemporaryDirectory() as folder:
             calls = []
             _, history, summary = self.run_fixture(Path(folder) / "default", 1.0, loader_calls=calls)
             config = json.loads((Path(folder) / "default" / "run" / "run_config.json").read_text())
-        self.assertEqual({size for _, _, size in calls}, {2})  # train, train_eval and validation loaders
-        self.assertEqual(config["eval_batch_size"], 2)
+        self.assertEqual([size for _, shuffle, size in calls if shuffle], [2])    # training loader keeps batch_size
+        self.assertEqual([size for _, shuffle, size in calls if not shuffle], [64, 64])  # train_eval and validation
+        self.assertEqual(config["eval_batch_size"], 64)
         self.assertIsNone(config["eval_batch_size_arg"])
         for key in ("total_train_seconds", "total_eval_seconds"):
             self.assertGreaterEqual(summary[key], 0)

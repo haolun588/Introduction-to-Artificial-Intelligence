@@ -34,7 +34,7 @@ def inspect_dataset(path: Path, expected_fields: set[str]) -> None:
             print(f"  {label}: {count:,} ({count / len(rows):.2%})")
 
 
-def main() -> None:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=["inspect", "eda", "prepare", "verify-base", "train", "predict", "kfold", "pretrain-mlm"])
     parser.add_argument("--data-dir", type=Path, default=ROOT / "dataset")
@@ -53,7 +53,7 @@ def main() -> None:
                         help="Evaluate every half or full epoch, aligned to accumulation boundaries")
     parser.add_argument("--batch-size", type=int, default=2)
     parser.add_argument("--eval-batch-size", type=int, default=None,
-                        help="Batch size of evaluation loaders (train/pretrain-mlm); default None reuses --batch-size")
+                        help="Batch size of evaluation loaders; default None: train uses 64, pretrain-mlm reuses --batch-size")
     parser.add_argument("--accumulation-steps", type=int, default=8)
     parser.add_argument("--learning-rate", type=float, default=None, help="train default 2e-5; pretrain-mlm default 5e-5")
     parser.add_argument("--layer-lr-decay", type=float, default=1.0,
@@ -79,8 +79,15 @@ def main() -> None:
                         help="train: allow the --init-from MLM corpus to overlap validation ids (recorded as non-strict OOF)")
     parser.add_argument("--max-length", type=int, default=64)
     parser.add_argument("--no-amp", action="store_true")
-    parser.add_argument("--no-gradient-checkpointing", action="store_true")
+    parser.add_argument("--gradient-checkpointing", action=argparse.BooleanOptionalAction, default=False,
+                        help="Gradient checkpointing, off by default; enable for FGSM, long --max-length or OOM "
+                             "(--no-gradient-checkpointing kept for old commands)")
     parser.add_argument("--smoke", action="store_true", help="Train one epoch on 16 examples per class per split")
+    return parser
+
+
+def main() -> None:
+    parser = build_parser()
     args = parser.parse_args()
     mlm_defaults = args.command == "pretrain-mlm"
     if args.split is None and not mlm_defaults:

@@ -172,10 +172,22 @@ def evaluate(model, batches, device, amp=False):
         model.train(was_training)
 
 
+DEFAULT_EVAL_BATCH_SIZE = 64
+
+
 def resolve_eval_batch_size(args):
-    """Evaluation loader batch size: --eval-batch-size, or --batch-size when unset (None)."""
+    """Evaluation loader batch size for train: --eval-batch-size, or 64 when unset (None)."""
     value = getattr(args, "eval_batch_size", None)
-    return args.batch_size if value is None else value
+    return DEFAULT_EVAL_BATCH_SIZE if value is None else value
+
+
+def gradient_checkpointing_enabled(args):
+    """New attribute `gradient_checkpointing` (default off); falls back to legacy `no_gradient_checkpointing`."""
+    if hasattr(args, "gradient_checkpointing"):
+        return bool(args.gradient_checkpointing)
+    if hasattr(args, "no_gradient_checkpointing"):
+        return not args.no_gradient_checkpointing
+    return False
 
 
 def sync_cuda(device):
@@ -395,7 +407,8 @@ def train(args):
     if init_from_path is not None:
         from .mlm import load_encoder_from_mlm
         load_encoder_from_mlm(model, init_from_path, tokenizer)
-    if not args.no_gradient_checkpointing:
+    use_checkpointing = gradient_checkpointing_enabled(args)
+    if use_checkpointing:
         model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
     train_batches = loader(train_rows, tokenizer, args.max_length, args.batch_size, True, args.seed, preprocessing=args.preprocessing)
     eval_batch_size = resolve_eval_batch_size(args)
@@ -432,7 +445,7 @@ def train(args):
               "class_weights": weights.tolist() if weights is not None else None,
               "loss_normalization": "weighted sum / actual accumulation-window sample count; train mean weight 1",
               "evaluation_loss": "unweighted cross entropy for baseline comparison",
-              "amp": amp, "gradient_checkpointing": not args.no_gradient_checkpointing,
+              "amp": amp, "gradient_checkpointing": use_checkpointing,
               "smoke": args.smoke, "dataset_sha256": manifest["dataset_sha256"],
               "split_sha256": hashlib.sha256(args.split.read_bytes()).hexdigest(),
               "train_ids": [r["id"] for r in train_rows], "validation_ids": [r["id"] for r in val_rows]}

@@ -88,6 +88,8 @@ IAI_HW3/
 
 每半輪評估已實作並完成一次控制組；上面是操作範例，不是要求再跑相同設定。`--eval-interval` 預設 1.0，相容舊指令；後續新方法明確指定 0.5，評估對齊完整累積窗口並記錄實際進度。較溫和權重 `--class-weighting quarter-inverse` 已實作並完成對照；分層學習率 `--layer-lr-decay 0.9` 已實作並完成對照，預設 1.0 保留均一學習率。FGSM 以 `--fgsm-epsilon` 開啟，預設 0 保留原流程；尺度與短跑見 [校準報告](docs/reports/FGSM_Calibration_Report.md)，最新結果與停止搜尋決策見 [C2 報告](docs/reports/FGSM_High_Report.md)。
 
+**預設值變更（2026/11/19，依據 [速度實測報告](docs/reports/Speed_Check_Report.md)）**：`train` 的評估 batch 預設為 64（`--eval-batch-size` 未指定時；`pretrain-mlm` 仍沿用 `--batch-size`），gradient checkpointing 預設關閉（`--gradient-checkpointing` 開啟，`--no-gradient-checkpointing` 仍可用於舊指令）。微調權重與舊設定位元相同，1 epoch 約 467 秒降到 203 秒。開 FGSM、加長 `--max-length` 或遇到 OOM 時請加 `--gradient-checkpointing`。需要和舊 MLM run 逐位比較驗證 loss 時，不要改 `pretrain-mlm` 的評估 batch（驗證遮罩依評估 batch 物化，改變會使 val MLM loss 不可逐位比較；實測評估 batch 64 還會讓峰值 reserved 超過 4 GB）。
+
 ## 環境與固定切分
 
 本機已完成安裝與模型下載。只在新環境執行下列步驟；訓練環境已以 Python 3.12 驗證：
@@ -125,6 +127,7 @@ python -m venv .venv
 bash tools/run_cv5_sqrt.sh   # 5 次訓練後呼叫 python -m tools.cv_oof 產生 OOF 與集成 CSV
 bash tools/run_cv5.sh <name> <none|sqrt-inverse|quarter-inverse> [epochs] [train 參數...]   # 通用版（epochs 可選，正整數，預設 3）；第 4 個起的參數原樣轉給 main.py train（例如 --label-smoothing 0.1，需明確給 epochs）；run_cv5_sqrt.sh 為其包裝
 bash tools/run_cv5_mlm.sh <name> <none|sqrt-inverse|quarter-inverse> <finetune_epochs> <mlm_epochs> [folds...]   # 每折先 pretrain-mlm 再 train --init-from；5 折皆完成才跑 OOF，只給部分 folds 會跳過 OOF
+bash tools/run_full_mlm.sh <name> <mlm_epochs> <finetune_epochs> <seeds...>   # 預設切分 8,100 筆：每個 seed 先 pretrain-mlm 再 sqrt-inverse train --init-from；全部 seed 完成後呼叫 python -m tools.ensemble_checkpoints（至多 3 個 checkpoint 的 FP32 等權 softmax 集成）
 bash tools/run_cv5_mlm_shared.sh <name> <none|sqrt-inverse|quarter-inverse> <finetune_epochs> <mlm_epochs>   # 以全部 9,000 筆文字續訓一次（pretrain-mlm --mlm-corpus all-dataset），5 折共用該 checkpoint 微調（train --allow-mlm-val-overlap，非嚴格 OOF）
 python -m tools.compare_oof --a outputs/cv5_sqrt_oof --b outputs/cv5_quarter_oof --output <新 json>   # 配對 bootstrap 比較兩份 OOF
 ```
