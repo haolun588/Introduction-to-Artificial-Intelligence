@@ -24,7 +24,7 @@ from transformers import (AutoModelForMaskedLM, AutoTokenizer, DataCollatorForLa
                           get_linear_schedule_with_warmup)
 
 from .model_source import file_sha256, verify_base_model
-from .training import (ROOT, TextDataset, choose_device, load_split, smoke_subset, write_json)
+from .training import (ROOT, TextDataset, choose_device, load_split, smoke_subset, sync_cuda, write_json)
 
 MLM_CODE_FILES = ("main.py", "src/__init__.py", "src/training.py", "src/eda.py", "src/preprocessing.py",
                   "src/model_source.py", "src/mlm.py")
@@ -98,6 +98,9 @@ def pretrain_mlm(args):
         raise ValueError("pretrain-mlm requires --split, --output-dir and --checkpoint")
     if min(args.epochs, args.batch_size, args.accumulation_steps, args.max_length) < 1:
         raise ValueError("Epochs, batch size, accumulation and max length must be positive")
+    eval_batch_size = args.batch_size if getattr(args, "eval_batch_size", None) is None else args.eval_batch_size
+    if eval_batch_size < 1:
+        raise ValueError("Evaluation batch size must be positive")
     if args.max_length > 512 or not math.isfinite(args.learning_rate) or args.learning_rate <= 0 \
             or not 0 <= args.warmup_ratio < 1 or not 0 < args.mask_prob < 1 or args.weight_decay < 0:
         raise ValueError("Invalid max length, learning rate, warmup ratio, mask probability or weight decay")
@@ -143,7 +146,7 @@ def pretrain_mlm(args):
     train_batches = collate_rows(train_rows, tokenizer, args.max_length, args.batch_size, collator,
                                  args.preprocessing, shuffle=True, seed=args.seed)
     val_batches = None if not val_rows else fixed_mask_batches(
-        collate_rows(val_rows, tokenizer, args.max_length, args.batch_size, collator, args.preprocessing),
+        collate_rows(val_rows, tokenizer, args.max_length, eval_batch_size, collator, args.preprocessing),
         args.seed + 1)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate,
                                   weight_decay=args.weight_decay, foreach=False)
@@ -157,7 +160,8 @@ def pretrain_mlm(args):
     config = {"model": base_source["model"], "revision": base_source["revision"],
               "base_model_source": base_source, "training_code_sha256": code_hashes,
               "seed": args.seed, "preprocessing": args.preprocessing, "max_length": args.max_length,
-              "batch_size": args.batch_size, "accumulation_steps": args.accumulation_steps,
+              "batch_size": args.batch_size, "eval_batch_size": eval_batch_size,
+              "eval_batch_size_arg": getattr(args, "eval_batch_size", None), "accumulation_steps": args.accumulation_steps,
               "epochs": epochs, "learning_rate": args.learning_rate, "mask_prob": args.mask_prob,
               "masking": "80/10/10 DataCollatorForLanguageModeling, special tokens never masked",
               "warmup_ratio": args.warmup_ratio, "warmup_steps": warmup_steps, "weight_decay": args.weight_decay,
@@ -178,8 +182,9 @@ def pretrain_mlm(args):
           f"optimizer steps planned: {total_steps}", flush=True)
     history, update_count, attempted_updates, empty_windows = [], 0, 0, 0
     started = time.perf_counter()
+    total_train_seconds, total_eval_seconds = 0.0, 0.0
     for epoch in range(1, epochs + 1):
-        epoch_started = time.perf_counter()
+        epoch_started = sync_cuda(device)
         model.train()
         optimizer.zero_grad(set_to_none=True)
         loss_sum, token_count = 0.0, 0
@@ -217,8 +222,15 @@ def pretrain_mlm(args):
                     print(f"Epoch {epoch}: batch {index+1}/{len(train_batches)}, updates {update_count}", flush=True)
         if token_count == 0:
             raise ValueError("No masked tokens were drawn during the epoch")
+        eval_started = sync_cuda(device)
+        validation_loss = evaluate_mlm(model, val_batches, device, amp) if val_batches else None
+        eval_seconds = sync_cuda(device) - eval_started
+        train_seconds = eval_started - epoch_started
+        total_train_seconds += train_seconds
+        total_eval_seconds += eval_seconds
         row = {"epoch": epoch, "train_mlm_loss": loss_sum / token_count,
-               "validation_mlm_loss": evaluate_mlm(model, val_batches, device, amp) if val_batches else None,
+               "validation_mlm_loss": validation_loss,
+               "train_seconds": train_seconds, "eval_seconds": eval_seconds,
                "learning_rate": optimizer.param_groups[0]["lr"],
                "seconds": time.perf_counter() - epoch_started,
                "optimizer_updates": update_count, "attempted_updates": attempted_updates,
@@ -232,6 +244,7 @@ def pretrain_mlm(args):
     if update_count == 0 or scheduler.last_epoch != update_count:
         raise ValueError("No optimizer updates succeeded or scheduler steps differ from updates")
     peak = torch.cuda.max_memory_allocated() / 2**20 if device.type == "cuda" else None
+    peak_reserved = torch.cuda.max_memory_reserved() / 2**20 if device.type == "cuda" else None
     model.save_pretrained(checkpoint, safe_serialization=True)
     tokenizer.save_pretrained(checkpoint)
     write_json(checkpoint / "mlm_config.json", {**config, "final_epoch": epochs,
@@ -241,6 +254,8 @@ def pretrain_mlm(args):
                "final_validation_mlm_loss": history[-1]["validation_mlm_loss"],
                "optimizer_updates": update_count, "attempted_updates": attempted_updates,
                "skipped_updates": attempted_updates - update_count, "empty_windows": empty_windows, "peak_allocated_mb": peak,
+               "peak_reserved_mb": peak_reserved, "total_train_seconds": total_train_seconds,
+               "total_eval_seconds": total_eval_seconds,
                "total_seconds": time.perf_counter() - started,
                "model_sha256": file_sha256(checkpoint / "model.safetensors")}
     write_json(output / "summary.json", summary)

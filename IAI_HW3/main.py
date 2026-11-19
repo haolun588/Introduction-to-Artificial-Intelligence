@@ -52,6 +52,8 @@ def main() -> None:
     parser.add_argument("--eval-interval", type=float, choices=[0.5, 1.0], default=1.0,
                         help="Evaluate every half or full epoch, aligned to accumulation boundaries")
     parser.add_argument("--batch-size", type=int, default=2)
+    parser.add_argument("--eval-batch-size", type=int, default=None,
+                        help="Batch size of evaluation loaders (train/pretrain-mlm); default None reuses --batch-size")
     parser.add_argument("--accumulation-steps", type=int, default=8)
     parser.add_argument("--learning-rate", type=float, default=None, help="train default 2e-5; pretrain-mlm default 5e-5")
     parser.add_argument("--layer-lr-decay", type=float, default=1.0,

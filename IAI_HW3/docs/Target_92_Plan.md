@@ -1,6 +1,6 @@
 # Kaggle 92% 改進計畫
 
-制定：2026/11/14；更新：2026/11/17（第二次路線調整）。Kaggle 目標 ≥0.9200，目前最高使用者回報 0.9152（cv5_sqrt_ep5_mlm10 集成；非 MLM 最高為 weighted_quarter 0.9122）。A、B、C1、C2 均已完成；FGSM 兩設定驗證均未改善，停止幅度搜尋。步驟 1（logit 偏移校正）、步驟 2（五折 CV）、步驟 3a（sqrt vs quarter CV 重比）、步驟 3b（訓練長度 3 → 5 epochs）已完成；步驟 3c（label smoothing）已中止並由第二次調整取代，順序 0（上傳集成 CSV）已由使用者回報 Kaggle 0.8971（見「路線調整（2026-11-16，第二次）」），下一步待定。順序 2 錯標抽查已通過（[報告](reports/Label_Noise_Audit_Report.md)），`cv5_sqrt_ep5_drop90` 已完成（[報告](reports/CV5_Drop90_Report.md)）：OOF 89.34%，Δ +0.12 個百分點，未達預先登記門檻 +0.5，順序 2 已停止；順序 3 MLM 續訓完成（OOF 89.63%，Δ +0.41，未達門檻；Kaggle 0.9152）。下一步：方向 2（cv5_sqrt_ep5_mlmall30）已完成（[報告](reports/CV5_MLMAll30_Report.md)），Kaggle 0.9142 < 0.9152，依預先登記主版本維持 mlm10（目前最高仍為 mlm10 0.9152）；下一步待與使用者討論。
+制定：2026/11/14；更新：2026/11/17（第二次路線調整）。Kaggle 目標 ≥0.9200，目前最高使用者回報 0.9152（cv5_sqrt_ep5_mlm10 集成；非 MLM 最高為 weighted_quarter 0.9122）。A、B、C1、C2 均已完成；FGSM 兩設定驗證均未改善，停止幅度搜尋。步驟 1（logit 偏移校正）、步驟 2（五折 CV）、步驟 3a（sqrt vs quarter CV 重比）、步驟 3b（訓練長度 3 → 5 epochs）已完成；步驟 3c（label smoothing）已中止並由第二次調整取代，順序 0（上傳集成 CSV）已由使用者回報 Kaggle 0.8971（見「路線調整（2026-11-16，第二次）」），下一步待定。順序 2 錯標抽查已通過（[報告](reports/Label_Noise_Audit_Report.md)），`cv5_sqrt_ep5_drop90` 已完成（[報告](reports/CV5_Drop90_Report.md)）：OOF 89.34%，Δ +0.12 個百分點，未達預先登記門檻 +0.5，順序 2 已停止；順序 3 MLM 續訓完成（OOF 89.63%，Δ +0.41，未達門檻；Kaggle 0.9152）。下一步：方向 2（cv5_sqrt_ep5_mlmall30）已完成（[報告](reports/CV5_MLMAll30_Report.md)），Kaggle 0.9142 < 0.9152，依預先登記主版本維持 mlm10（目前最高仍為 mlm10 0.9152）；方向 3（full8100_mlm10）已預先登記、未開工；下一步待與使用者討論。
 
 ## 路線調整（2026-11-16，第二次）
 
@@ -89,6 +89,22 @@
 - 下一個具體動作：與使用者討論後續方向（不自行決定）。
 - 未 commit 的工作：git status 中所有 HW3 改動仍未 commit。
 
+### 方向 3 預先登記：full8100_mlm10（2026-11-19 草稿，未開工）
+
+狀態：**已準備、未開工，等使用者指示開工。** 腳本 `tools/run_full_mlm.sh`、集成工具 `tools/ensemble_checkpoints.py` 與測試 `tests/test_ensemble_checkpoints.py` 已備妥，尚無任何訓練或推論產物。
+
+- 背景：`cv5_sqrt_ep5_mlm10`（Kaggle 0.9152，目前最高）為五折模型，每個只用約 7,200 筆訓練文字與標籤；順序 3 預先登記（`cv5_sqrt_ep5_mlm10`）已寫「最終交件模型只用原訓練子集 8,100 筆文字續訓」，此設定尚未做過。Kaggle 即成績；只換 seed Kaggle 曾差 1.7 個百分點；使用者同意方法用盡後可用 Kaggle 在已登錄候選間挑選。
+- 假設：同 mlm10 設定，訓練資料由約 7,200 增為 8,100，加上多 seed，可使至少一個候選 Kaggle ≥ 0.92（推測，未驗證）。
+- 設定：切分 `outputs/eda/split.json`（train 8,100／validation 900，與 `weighted_quarter` 相同）；每個 seed 各自 MLM 續訓 10 epochs（只用 8,100 筆訓練文字；lr 5e-5、遮罩 15% 80/10/10、warmup 6%、weight decay 0.01、batch 2、累積 8、儲存最後 epoch），再 sqrt-inverse 微調 5 epochs，以 900 驗證挑最佳 epoch；seeds 42、43、44（MLM 與微調用同一 seed）。
+- 對照：mlm10 集成 0.9152（主版本）、`weighted_quarter` 0.9122（保險）。
+- 預算：3 次 MLM 續訓＋3 次微調，不追加。估計每個 seed MLM 約 68 分鐘（依 mlmall30 每 epoch 450 秒 × 8,100/9,000 推算）、微調約 36 分鐘，合計約 5.2 小時（推測，以實測為準）。
+- 指令：`bash tools/run_full_mlm.sh full8100_mlm10 10 5 42 43 44`，log `outputs/full8100_mlm10_train.log`。建議先只跑 seed 42（`... 10 5 42`）確認流程與耗時；3 個 seed 全部完成後腳本自動呼叫 `python -m tools.ensemble_checkpoints`，輸出 `outputs/full8100_mlm10_ensemble_seed42-43-44/`（單模型與 3 模型等權 softmax 集成 CSV、SHA-256、`summary.json`）。只跑 seed 42 時會產生 `outputs/full8100_mlm10_ensemble_seed42/`（1 模型，僅供流程檢查，不上傳）。
+- Kaggle 上傳（預先固定上限 4 次）：3 個單模型 CSV ＋ 1 個 3 模型等權集成 CSV，全部由使用者上傳回報，之後不再為此實驗追加上傳。
+- 判定（預先固定）：任一候選 ≥ 0.92 → 取 Kaggle 最高者為主要候選；最高者介於 0.9152 與 0.92 → 該者成為新主版本，但目標未達、不再延伸此線（另與使用者討論）；全部 ≤ 0.9152 → 主版本維持 mlm10。900 驗證分數只用來挑 epoch 與記錄，不作判定。
+- 限制：900 驗證與 Kaggle 排序曾不一致；單次 Kaggle 雜訊約 ±1 個百分點；從 4 個上傳挑最高是以 Kaggle 選擇（Kaggle 即成績，使用者已同意），但分數本身不代表泛化提升。
+- 合規：只用課程提供資料的訓練文字，不用 benchmark、不用 validation 文字續訓（`check_init_from` 嚴格檢查，不加 `--allow-mlm-val-overlap`）；講義 p.9「base model」續訓風險使用者已於 11/17 接受；若最終主版本為 MLM 版，依交件規則附說明文件與非 MLM 保險版 `weighted_quarter`。集成 3 個模型符合上限。
+- 尚未登錄：registry、實驗總表、報告均待有產物後再寫，屆時執行 `refresh_experiments.py`。
+
 ## 新研究路線（2026/11/16 起，取代原第三、四階段）
 
 > 註：步驟 3 後續（label smoothing／R-Drop）與步驟 4 已由上方「路線調整（2026-11-16，第二次）」取代；步驟 1、2、3a、3b 維持有效。
@@ -164,6 +180,8 @@
 | 2026/11/17（第二次） | 使用者說明 Kaggle 無 public／private 之分、目標為最終一個 > 0.92 的模型，方法用盡後可用 Kaggle 在已登錄候選間挑選；使用者選擇方向 2（cv5_sqrt_ep5_mlmall30，見「方向 2 預先登記草稿」），指示先不開工 | mlm10 是唯一在 OOF 與 Kaggle 皆為正的方向；以 Kaggle 為最終判斷後，嚴格 OOF 比較的價值下降，方向 2 只需續訓一次、總時間約 6 小時（方向 1 每折各自續訓 30 epochs 約 15 小時） |
 | 2026/11/18（第二次） | 方向 2 `cv5_sqrt_ep5_mlmall30` 預先登記經使用者確認（設定、判斷規則不變，見「方向 2 預先登記」）；開工前新增：`pretrain-mlm --mlm-corpus all-dataset`、`train --allow-mlm-val-overlap`（寫入 run_config 標示非嚴格 OOF）、`tools/run_cv5_mlm_shared.sh`（續訓一次、5 折共用） | 使用者確認；以 Kaggle fold 0/1/2 集成分數判斷，OOF 只參考 |
 | 2026/11/19（第二次） | 方向 2 `cv5_sqrt_ep5_mlmall30` 完成（[報告](reports/CV5_MLMAll30_Report.md)）：非嚴格 OOF 90.21%（偏樂觀，只參考），Kaggle 0.9142（使用者回報）< 0.9152 → 依預先登記判斷主版本維持 mlm10，不延伸此線；一次改兩個因素且差距遠小於 Kaggle 雜訊，只能說未見改善；下一步待與使用者討論 | 預先登記規則：< 0.9152 主版本維持 mlm10 |
+| 2026/11/19（第二次） | 訓練加速等價性實測（speed_check）預先登記（訓練前寫下）。**目的**：量測加速設定的速度效益與數值等價性；不是為了提高分數，不產生交件候選。**新增程式**：`--eval-batch-size`（預設 None＝沿用 `--batch-size`，不指定時行為不變）與計時拆解（history 每列 `train_seconds`／`eval_seconds`；summary `total_train_seconds`、`total_eval_seconds`、`peak_allocated_mb`、`peak_reserved_mb`）。**共同設定**：seed 42、`--split outputs/eda/split.json`、`--class-weighting sqrt-inverse`、`--epochs 1`、不用 `--init-from`；輸出 `outputs/speed_check/<組別>`、checkpoint `saved_models/speed_check/<組別>`。**組別（每組只比上一組多一個變因）**：A 現行設定（對照，batch 2、累積 8、gradient checkpointing 開）；B = A + `--eval-batch-size 64`；C = B + `--no-gradient-checkpointing`；D = C + `--batch-size 8 --accumulation-steps 2`（等效 batch 16 不變）；E = C + `--batch-size 16 --accumulation-steps 1`（僅在 D 峰值 reserved VRAM < 3,000 MiB 時才跑）。MLM：M-A 現行 `pretrain-mlm` 1 epoch；M-C = M-A + `--no-gradient-checkpointing --eval-batch-size 64`；M-D = M-C + `--batch-size 8 --accumulation-steps 2`（同樣條件式：M-C 峰值 reserved < 3,000 MiB 才跑）。**假設**：B 的訓練過程與 A 位元相同，只有評估更快，驗證 macro-F1 差 ≤ 0.002；C 數值近乎相同（驗證 macro-F1 差 ≤ 0.005），訓練段加快 20～35%；D／E 因 dropout 亂數與 padding 不同而非等價，只記錄速度與分數差，不據單次 1 epoch 結果判定分數優劣。**決策資訊**：哪些設定可作為後續長時間訓練的預設；監控腳本的新速度門檻。**上限與停止條件**：全部合計 ≤ 60 分鐘 GPU 時間；任一組 OOM 或 reserved VRAM ≥ 3,900 MiB 即放棄該組及更大 batch 組。**注意**：MLM 的驗證遮罩在固定 RNG 下以評估 batch 物化，改 `--eval-batch-size` 會改變驗證遮罩，M-C 的 val MLM loss 與 M-A 不能逐位比較（只作量級參考）；`tools/cv_oof.py` 的 BATCH_SIZE=2 為 OOF 推論設定，未更動。 | 目前每個 CV 折訓練與 MLM 續訓耗時長，預先量測可安全套用的加速設定，以決定後續長時間訓練的預設 |
+| 2026/11/19（第二次） | 訓練加速等價性實測（speed_check）結果摘要（[報告](reports/Speed_Check_Report.md)）。**微調**：B（`--eval-batch-size 64`）、C（再加 `--no-gradient-checkpointing`）與 A 的權重 SHA-256 相同、驗證混淆矩陣相同（位元等價），1 epoch 由 467 秒降到 203 秒（約 2.3 倍），可作為後續微調預設；D／E（batch 8／16）約 3.6～4.3 倍但非等價，F1 差異在單次雜訊內，列為待登記的後續實驗。**MLM**：M-C 的 train MLM loss 與 M-A 相同、224.5 對 334.6 秒，但 peak reserved 4,166 MiB 超過停止條件 3,900 MiB（推測來自評估 batch 64 的詞表 logits，未驗證），M-D 跳過；MLM 可採用 `--no-gradient-checkpointing`，評估 batch 須改小並另測。監控腳本 `tools/gpu_watch.sh` 已依實測校正門檻。本輪不是訓練 run，未寫入 registry。 | 實測後確定長時間訓練的加速預設與監控門檻 |
 
 ## 現況與保留版本
 

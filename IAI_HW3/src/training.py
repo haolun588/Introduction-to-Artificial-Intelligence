@@ -172,6 +172,18 @@ def evaluate(model, batches, device, amp=False):
         model.train(was_training)
 
 
+def resolve_eval_batch_size(args):
+    """Evaluation loader batch size: --eval-batch-size, or --batch-size when unset (None)."""
+    value = getattr(args, "eval_batch_size", None)
+    return args.batch_size if value is None else value
+
+
+def sync_cuda(device):
+    if device.type == "cuda":
+        torch.cuda.synchronize()
+    return time.perf_counter()
+
+
 def evaluation_points(num_batches, accumulation, interval):
     """Map completed batch counts to nominal epoch fractions, without partial windows."""
     if min(num_batches, accumulation) < 1 or interval not in (0.5, 1.0):
@@ -330,6 +342,8 @@ def train(args):
         raise ValueError("Evaluation interval must be 0.5 or 1.0 epochs")
     if min(args.epochs, args.batch_size, args.accumulation_steps, args.max_length) < 1:
         raise ValueError("Epochs, batch size, accumulation and max length must be positive")
+    if getattr(args, "eval_batch_size", None) is not None and args.eval_batch_size < 1:
+        raise ValueError("Evaluation batch size must be positive")
     if args.max_length > 512 or args.learning_rate <= 0 or not 0 <= args.warmup_ratio < 1:
         raise ValueError("Invalid max length, learning rate or warmup ratio")
     output = args.output_dir or ROOT / "outputs" / ("smoke" if args.smoke else "baseline")
@@ -384,8 +398,9 @@ def train(args):
     if not args.no_gradient_checkpointing:
         model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
     train_batches = loader(train_rows, tokenizer, args.max_length, args.batch_size, True, args.seed, preprocessing=args.preprocessing)
-    train_eval = loader(train_rows, tokenizer, args.max_length, args.batch_size, preprocessing=args.preprocessing)
-    val_batches = loader(val_rows, tokenizer, args.max_length, args.batch_size, preprocessing=args.preprocessing)
+    eval_batch_size = resolve_eval_batch_size(args)
+    train_eval = loader(train_rows, tokenizer, args.max_length, eval_batch_size, preprocessing=args.preprocessing)
+    val_batches = loader(val_rows, tokenizer, args.max_length, eval_batch_size, preprocessing=args.preprocessing)
     eval_points = evaluation_points(len(train_batches), args.accumulation_steps, eval_interval)
     groups = optimizer_groups(model, args.learning_rate, layer_decay)
     group_config = [{"name": g["group_name"], "learning_rate": g["lr"], "weight_decay": 0.01,
@@ -400,6 +415,7 @@ def train(args):
               "base_model_source": base_source, "training_code_sha256": code_hashes,
               "seed": args.seed, "labels": list(LABELS),
               "preprocessing": args.preprocessing, "max_length": args.max_length, "batch_size": args.batch_size,
+              "eval_batch_size": eval_batch_size, "eval_batch_size_arg": getattr(args, "eval_batch_size", None),
               "accumulation_steps": args.accumulation_steps, "learning_rate": args.learning_rate,
               "layer_lr_decay": layer_decay, "optimizer_groups": group_config,
               "weight_decay": 0.01, "warmup_ratio": args.warmup_ratio, "epochs": epochs,
@@ -430,6 +446,8 @@ def train(args):
     print(f"Class weights ({', '.join(LABELS)}): {config['class_weights']}", flush=True)
     best_f1, history, update_count, attempted_updates = -1.0, [], 0, 0
     started = time.perf_counter()
+    total_train_seconds, total_eval_seconds = 0.0, 0.0
+    segment_started = sync_cuda(device)
     for epoch in range(1, epochs + 1):
         epoch_started = time.perf_counter()
         model.train()
@@ -464,11 +482,19 @@ def train(args):
                     print(f"Epoch {epoch}: batch {index+1}/{len(train_batches)}, updates {update_count}", flush=True)
             if index + 1 in eval_points:
                 point = epoch - 1 + eval_points[index + 1]
+                eval_started = sync_cuda(device)
+                train_seconds = eval_started - segment_started
+                train_metrics = evaluate(model, train_eval, device, amp)
+                val_metrics = evaluate(model, val_batches, device, amp)
+                eval_seconds = sync_cuda(device) - eval_started
+                total_train_seconds += train_seconds
+                total_eval_seconds += eval_seconds
                 row = {"epoch": point, "batch_in_epoch": index + 1,
                        "actual_epoch_progress": epoch - 1 + min((index + 1) * args.batch_size, len(train_rows)) / len(train_rows),
-                       "train": evaluate(model, train_eval, device, amp),
-                       "validation": evaluate(model, val_batches, device, amp),
+                       "train": train_metrics,
+                       "validation": val_metrics,
                        "seconds": time.perf_counter() - epoch_started,
+                       "train_seconds": train_seconds, "eval_seconds": eval_seconds,
                        "optimizer_updates": update_count, "attempted_updates": attempted_updates,
                        "skipped_updates": attempted_updates - update_count,
                        "scheduler_steps": scheduler.last_epoch, "next_learning_rate": optimizer.param_groups[0]["lr"]}
@@ -483,13 +509,16 @@ def train(args):
                         "best_optimizer_updates": update_count, "validation": row["validation"]})
                 write_json(output / "history.json", history)
                 plot_history(history, output / "curves.png")
-                print(f"Epoch {point:g}: train F1={row['train']['macro_f1']:.4f}, val F1={row['validation']['macro_f1']:.4f}, {row['seconds']:.1f}s", flush=True)
+                print(f"Epoch {point:g}: train F1={row['train']['macro_f1']:.4f}, val F1={row['validation']['macro_f1']:.4f}, {row['seconds']:.1f}s "
+                      f"(train {train_seconds:.1f}s, eval {eval_seconds:.1f}s)", flush=True)
+                segment_started = sync_cuda(device)  # checkpoint save / plotting excluded from both segments
     if update_count == 0:
         raise ValueError("No optimizer updates succeeded")
     if scheduler.last_epoch != update_count:
         raise ValueError("Scheduler steps differ from successful optimizer updates")
     scheduler_steps = scheduler.last_epoch
     peak = torch.cuda.max_memory_allocated() / 2**20 if device.type == "cuda" else None
+    peak_reserved = torch.cuda.max_memory_reserved() / 2**20 if device.type == "cuda" else None
     # Release optimizer state before loading the selected checkpoint on a small GPU.
     if fgsm_epsilon == 0:
         del logits
@@ -506,7 +535,9 @@ def train(args):
                "best_validation_macro_f1": best_f1, "optimizer_updates": update_count,
                "attempted_updates": attempted_updates, "skipped_updates": attempted_updates - update_count,
                "scheduler_steps": scheduler_steps, "evaluation_count": len(history),
-               "peak_allocated_mb": peak, "total_seconds": time.perf_counter() - started,
+               "peak_allocated_mb": peak, "peak_reserved_mb": peak_reserved,
+               "total_train_seconds": total_train_seconds, "total_eval_seconds": total_eval_seconds,
+               "total_seconds": time.perf_counter() - started,
                "reload_verified": True, "reloaded_validation": reloaded_metrics}
     write_json(output / "summary.json", summary)
     print(json.dumps(summary, indent=2), flush=True)

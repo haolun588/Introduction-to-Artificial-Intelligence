@@ -185,7 +185,7 @@ class TrainingTests(unittest.TestCase):
 
 
 class TrainingLoopIntegrationTests(unittest.TestCase):
-    def run_fixture(self, root, interval, skip_first=False):
+    def run_fixture(self, root, interval, skip_first=False, eval_batch_size=None, loader_calls=None):
         """Real tiny dropout training; synthetic tied selection scores; no BERT."""
         class Classifier(torch.nn.Module):
             def __init__(self):
@@ -215,6 +215,8 @@ class TrainingLoopIntegrationTests(unittest.TestCase):
         train_rows = [{"id": str(i), "label": labels[i % 3]} for i in range(11)]
         val_rows = [{"id": str(i + 100), "label": labels[i % 3]} for i in range(6)]
         def batches(rows, tokenizer, max_length, batch_size, shuffle=False, seed=42, **kwargs):
+            if loader_calls is not None:
+                loader_calls.append((rows is val_rows, shuffle, batch_size))
             data = [{"input_ids": torch.tensor([i / 10, 1.0]), "labels": labels.index(r["label"])}
                     for i, r in enumerate(rows)]
             result = torch.utils.data.DataLoader(data, batch_size=batch_size, shuffle=shuffle,
@@ -249,6 +251,8 @@ class TrainingLoopIntegrationTests(unittest.TestCase):
                                output_dir=root / "run", checkpoint=root / "checkpoint", base_model=root / "base",
                                device="cpu", no_amp=True, seed=42, data_dir=root, split=split,
                                class_weighting="sqrt-inverse", no_gradient_checkpointing=True, preprocessing="whitespace-v1")
+        if eval_batch_size is not None:
+            args.eval_batch_size = eval_batch_size
         original_scaler = torch.amp.GradScaler
         with patch("src.training.verify_base_model", return_value={"directory": str(args.base_model), "model": "fixture", "revision": "fixture"}), \
                 patch("src.training.AutoModelForSequenceClassification.from_pretrained", side_effect=create_model), \
@@ -279,6 +283,31 @@ class TrainingLoopIntegrationTests(unittest.TestCase):
         self.assertEqual(summary["skipped_updates"], 0)
         self.assertAlmostEqual(history[1]["next_learning_rate"], 0.02)
         self.assertEqual(history[-1]["next_learning_rate"], 0)
+
+    def test_eval_batch_size_defaults_to_batch_size(self):
+        with tempfile.TemporaryDirectory() as folder:
+            calls = []
+            _, history, summary = self.run_fixture(Path(folder) / "default", 1.0, loader_calls=calls)
+            config = json.loads((Path(folder) / "default" / "run" / "run_config.json").read_text())
+        self.assertEqual({size for _, _, size in calls}, {2})  # train, train_eval and validation loaders
+        self.assertEqual(config["eval_batch_size"], 2)
+        self.assertIsNone(config["eval_batch_size_arg"])
+        for key in ("total_train_seconds", "total_eval_seconds"):
+            self.assertGreaterEqual(summary[key], 0)
+        self.assertTrue(all(r["train_seconds"] >= 0 and r["eval_seconds"] >= 0 for r in history))
+
+    def test_eval_batch_size_applies_only_to_evaluation_loaders(self):
+        with tempfile.TemporaryDirectory() as folder:
+            calls = []
+            full, _, _ = self.run_fixture(Path(folder) / "base", 1.0)
+            fast, _, _ = self.run_fixture(Path(folder) / "fast", 1.0, eval_batch_size=5, loader_calls=calls)
+            config = json.loads((Path(folder) / "fast" / "run" / "run_config.json").read_text())
+        self.assertEqual([size for _, shuffle, size in calls if shuffle], [2])
+        self.assertEqual([size for _, shuffle, size in calls if not shuffle], [5, 5])
+        self.assertEqual(config["eval_batch_size"], 5)
+        self.assertEqual(config["batch_size"], 2)
+        for name in full:  # evaluation batch size must not change training
+            self.assertTrue(torch.equal(full[name], fast[name]), name)
 
     def test_overflow_skip_does_not_advance_scheduler(self):
         with tempfile.TemporaryDirectory() as folder:

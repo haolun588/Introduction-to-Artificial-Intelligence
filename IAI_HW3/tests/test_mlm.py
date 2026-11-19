@@ -119,6 +119,27 @@ class PretrainMlmTests(MlmFixture):
         self.assertEqual(config["mlm_text_ids"], train_ids)
         self.assertFalse(set(config["mlm_text_ids"]) & set(config["validation_ids"]))
 
+    def test_eval_batch_size_defaults_and_applies_to_validation_loader_only(self):
+        default = json.loads((self.mlm_ckpt / "mlm_config.json").read_text())
+        self.assertEqual(default["eval_batch_size"], 2)
+        self.assertIsNone(default["eval_batch_size_arg"])
+        out, ckpt = Path(tempfile.mkdtemp(dir=self.root)) / "o", Path(tempfile.mkdtemp(dir=self.root)) / "c"
+        sizes = []
+        real = mlm.collate_rows
+
+        def spy(rows, tokenizer, max_length, batch_size, *a, **k):
+            sizes.append((k.get("shuffle", False), batch_size))
+            return real(rows, tokenizer, max_length, batch_size, *a, **k)
+
+        with patch("src.mlm.collate_rows", side_effect=spy):
+            self.run_mlm(out, ckpt, epochs=1, eval_batch_size=3)
+        self.assertEqual(sizes, [(True, 2), (False, 3)])
+        config = json.loads((ckpt / "mlm_config.json").read_text())
+        self.assertEqual((config["batch_size"], config["eval_batch_size"]), (2, 3))
+        summary = json.loads((out / "summary.json").read_text())
+        for key in ("total_train_seconds", "total_eval_seconds"):
+            self.assertGreaterEqual(summary[key], 0)
+
     def test_records_and_artifacts(self):
         config = json.loads((self.mlm_ckpt / "mlm_config.json").read_text())
         for key in mlm.MLM_REQUIRED_CONFIG_KEYS + ("final_epoch", "final_validation_mlm_loss", "mask_prob"):
