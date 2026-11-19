@@ -153,6 +153,27 @@ class CrossValidationAuditTests(unittest.TestCase):
         self.fx.edit_json("out/fold1/summary.json", lambda d: d.update(reload_verified=False))
         self.assert_fails("reload verification")
 
+    def add_init_from(self, sha=None):
+        self.fx.write_text("mlm/fold0/model.safetensors", "mlm-weights")
+        self.fx.write_text("mlm/fold0/mlm_summary.json", "{}")
+        record = {"path": "mlm/fold0", "model_sha256": sha or self.fx.sha("mlm/fold0/model.safetensors"),
+                  "mlm_run_config": {}}
+        for name in ("ckpt/fold0/training_config.json", "out/fold0/run_config.json"):
+            self.fx.edit_json(name, lambda d: d.update(init_from=record))
+
+    def test_init_from_checkpoint_is_verified(self):
+        self.add_init_from()
+        self.assertEqual(len(self.fx.run()[0]["folds"]), 2)
+
+    def test_init_from_hash_mismatch_rejected(self):
+        self.add_init_from(sha="0" * 64)
+        self.assert_fails("MLM init checkpoint hash differs")
+
+    def test_init_from_missing_files_rejected(self):
+        self.add_init_from()
+        self.fx.path("mlm/fold0/mlm_summary.json").unlink()
+        self.assert_fails("Missing MLM init checkpoint")
+
     def test_oof_rows_must_cover_dataset(self):
         self.fx.edit_json("oof/oof_metrics.json", lambda d: d.update(rows=5))
         self.assert_fails("OOF metrics provenance")
@@ -171,6 +192,66 @@ class CrossValidationAuditTests(unittest.TestCase):
         self.fx.entry["submission"]["sha256"] = self.fx.sha("oof/sub.csv")
         self.fx.edit_json("oof/oof_metrics.json", lambda d: d["ensemble"].update(sha256=self.fx.sha("oof/sub.csv")))
         self.assert_fails("submission IDs")
+
+
+class ComparisonTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.fx = Fixture(self.tmp.name)
+        self.report = {
+            "rows": 6, "k": 2, "dataset_sha256": DATASET_HASH,
+            "A": {"oof_macro_f1": 1.0}, "B": {"oof_macro_f1": 1.0}, "delta_oof_macro_f1": 0.0,
+            "delta_class_f1": {label: 0.0 for label in LABELS},
+            "per_fold": {"b_wins": 0}, "disagreement": {"rows": 0, "a_correct": 0, "b_correct": 0},
+            "paired_bootstrap": {"seed": 1, "resamples": 10, "delta_p2_5": -0.1, "delta_p97_5": 0.1,
+                                 "fraction_delta_le_0": 1.0}}
+        self.fx.write_json("cmp.json", self.report)
+
+    def run_pair(self):
+        a = copy.deepcopy(self.fx.entry)
+        a["id"] = "cv_a"
+        b = copy.deepcopy(self.fx.entry)
+        b["id"] = "cv_b"
+        b["comparison"] = {"path": "cmp.json", "a": "cv_a", "b": "cv_b"}
+        registry = {"cross_validations": [a, b]}
+        with mock.patch.object(refresh, "ROOT", self.fx.root.resolve()):
+            return refresh.collect_cross_validations(registry, DATASET_HASH, BENCHMARK_IDS)
+
+    def test_valid_comparison_records_hash_and_interval(self):
+        comparison = self.run_pair()[1]["comparison"]
+        self.assertEqual(comparison["sha256"], self.fx.sha("cmp.json"))
+        self.assertEqual((comparison["ci_low"], comparison["ci_high"]), (-0.1, 0.1))
+
+    def test_oof_macro_f1_must_match_registry_cv(self):
+        self.fx.edit_json("cmp.json", lambda d: d["A"].update(oof_macro_f1=0.5))
+        with self.assertRaisesRegex(ValueError, "A OOF Macro-F1 differs"):
+            self.run_pair()
+
+    def test_delta_must_be_consistent(self):
+        self.fx.edit_json("cmp.json", lambda d: d.update(delta_oof_macro_f1=0.2))
+        with self.assertRaisesRegex(ValueError, "delta inconsistent"):
+            self.run_pair()
+
+    def test_dataset_must_match(self):
+        self.fx.edit_json("cmp.json", lambda d: d.update(dataset_sha256="e" * 64))
+        with self.assertRaisesRegex(ValueError, "provenance differs"):
+            self.run_pair()
+
+    def test_missing_file_fails(self):
+        self.fx.path("cmp.json").unlink()
+        with self.assertRaises(OSError):
+            self.run_pair()
+
+    def test_render_shows_delta(self):
+        results = self.run_pair()
+        for cv in results:
+            cv["oof"]["classes"] = {label: {"f1": 1.0} for label in LABELS}
+        snapshot = {"runs": [], "audits": [], "package_rehearsals": [], "calibrations": [], "cross_validations": results,
+                    "train_rows": 1, "validation_rows": 1, "confirmation_splits": [],
+                    "roles": {"validation_reference": "a", "kaggle_candidate": "b", "comparison_control": None,
+                              "release_candidate": None}}
+        self.assertIn("配對比較", refresh.render(snapshot))
 
 
 if __name__ == "__main__":

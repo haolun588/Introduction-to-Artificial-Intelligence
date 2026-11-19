@@ -8,7 +8,7 @@
     "release_candidate": null
   },
   "score_provenance": "Historical user reports preserved in the linked reports; not independently verified on Kaggle. null means unknown.",
-  "registry_sha256": "de3e8d167774c1075ad8fae3f8479617b213ce7156c6204bf93124cadd07ffa1",
+  "registry_sha256": "878b21c14464fe0a8b24afa0d93cb0142762314df3f5186cd8cf24dc1d6aa1ea",
   "dataset_sha256": "aa410190a8facb5510bf853cb6f41acec5d374e568ec804192a2b212a419a55d",
   "benchmark_sha256": "1d9969750b41a7b9e2a7eeea4c7798ad8200adcbb5f652ee2353fcdc9777e4a2",
   "split_sha256": "c5a8afb4e92c8a24b2ac246f03fdc5046d00570b4320700425bb1c3587f9c308",
@@ -16,18 +16,19 @@
   "validation_rows": 900,
   "audit_scope": "File/metadata/CSV checks only; no model inference or platform verification. Current code hashes do not establish original training code provenance.",
   "current_code_sha256": {
-    "main.py": "c88591cafa85051eca72de0ad0d717068c930059c58c086f28ba70db2a1417d1",
+    "main.py": "a2118a2d2e966de4a6a6567bdb2ca46ed10497675e943e3cc953cc5c8c4d2b27",
     "src/__init__.py": "ee25363184124b0bb11e75541158ce31f7d9024ae158b6bde612b7e2b718a93b",
-    "src/training.py": "acb7454e175394427527cbfaa81ba7d6552c12a1de8075f9d16f385ac02ee762",
+    "src/training.py": "9e226fc767800b747b0de8238a77d2d97d1ec15ea92e647a2135e27f4b5d9d4e",
     "src/eda.py": "3b6794dc971cc058b7be75caaaf45f04e21e948308b2a5fbe9b519292ac32c11",
     "src/preprocessing.py": "695f0be4b4ff61cdf23e5ea2ad6110a2c7fbb0a3340cff4ac8c04318a020e356",
     "src/model_source.py": "afe5f5fff1b4dd99f9a47b00c03051d11a1c22897bc72bd8f1f199426fbe05ab",
+    "src/mlm.py": "a34c494e04f636759d5e127158958f7286d0e08ce8a338fc90924bf8383959ae",
     "tools/__init__.py": "a95a53b4ae731c56c5e476e34fcf1a462d1c41f7a602052c3c25cf144238eae0",
     "tools/analyze_ensemble.py": "71e6554c5001277c96c64ac5481f69b95f3d86a57f35945fa66a2e12a63567bc",
     "tools/audit_emoji.py": "fad8ac67f0a62abbbcbdb34a19cdfbe4b959aba268e25bdd65f3407621885f4b",
     "tools/audit_precision.py": "e32b21633dde1017ccdc670a6dee0dc8f6a22a5cf3366824c3a8f2b45f00df64",
-    "tools/cv_oof.py": "9fb06b9f16cd5bfecba5447ab6dbbfac1df002f50f4fa2e75a6d4a3b53185b4f",
-    "tools/refresh_experiments.py": "1a31673b062644c2ea694c5487c57b88b7f8f917983a744f275e220250a1a7b9",
+    "tools/cv_oof.py": "ea76e2501df273842e56ee367243d7f1611811dba4c9f8314a6493afc2655655",
+    "tools/refresh_experiments.py": "67c6097b757b3972af314841205721e8a138de9dbc26da1344e8ccee7dbd4426",
     "tools/calibrate_fgsm.py": "d0f14d813033dca7ecae674a3bf8c99129ab18adc613f50f37a5f79d9c8d6d5f",
     "tools/package_candidate.py": "a1b9b80615317bd3952ae3806bf4d4bcbcca4cef6b86e3e672bd0b3aa40da331",
     "tools/verify_package.py": "dc6c106d7d33bbe825f55798aae67dbe040f698b5e844a04b7f352726b121f5b",
@@ -3972,7 +3973,7 @@
         "submission_status": "not_submitted"
       },
       "kaggle_macro_f1": null,
-      "decision": "OOF 基準；步驟 3 以相同 5 折比較其他設定",
+      "decision": "步驟 2 OOF 基準；步驟 3b 後由 cv5_sqrt_ep5 取代為基準（差異不顯著）",
       "oof": {
         "macro_f1": 0.8902818208607041,
         "classes": {
@@ -4034,6 +4035,1023 @@
       "source_sha256": {
         "outputs/cv5_sqrt_oof/oof_metrics.json": "cc128ed7481c2e117a46e4387827b4d9e1b42300b48786a8bcba75a3efb1620f",
         "outputs/cv5_sqrt_oof/oof_predictions.csv": "d32c918756d151792858d80353c65508902aafaabafe1fa515f90cb572b258d3",
+        "outputs/cv5_seed42/folds_manifest.json": "21e1f5ba3094e3a9ef6f75c9650486ce033b2d107ca3a2329635e09a9508e3ea"
+      }
+    },
+    {
+      "id": "cv5_quarter",
+      "name": "五折 CV weighted_quarter",
+      "fold_dir": "outputs/cv5_seed42",
+      "folds": [
+        {
+          "fold": 0,
+          "split": "outputs/cv5_seed42/fold0.json",
+          "output": "outputs/cv5_quarter/fold0",
+          "checkpoint": "saved_models/cv5_quarter/fold0",
+          "split_sha256": "db6e6ef472bcf62b78ea0e85656c37de12b328d85dfc076ff8f150de123c1395",
+          "best_epoch": 3.0,
+          "validation_macro_f1": 0.8878611723749397,
+          "training_seconds": 1976.9022482999717,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "efcadf0fe617d4ebd49101b328cd41dc621a9dc03f223b3886c1080bd02a5aac",
+            "model.safetensors": "0d105e35ab983d42d4f127fd699cb9653e77a5a2ddf2edf4511441c3175b84ae",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "01763d677e6cd4fbb785880466d44f81add1b18da222336e4a066156529fdeee"
+        },
+        {
+          "fold": 1,
+          "split": "outputs/cv5_seed42/fold1.json",
+          "output": "outputs/cv5_quarter/fold1",
+          "checkpoint": "saved_models/cv5_quarter/fold1",
+          "split_sha256": "3a0dd6e4fe38648ec88dd279fe9596b4d8f9b80d581ad6d1af14e7a8e1f458e8",
+          "best_epoch": 2.0,
+          "validation_macro_f1": 0.8814672840119063,
+          "training_seconds": 1720.2598074999987,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "9b4c3313d8af1e2fe98713d6309a3f8efeb5cee8bac61c7d36d597ae6db0afb0",
+            "model.safetensors": "48519e49f7102a69cb944838fa925588daa91aa543d24ac482546fc60d480364",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "e2bf28121ff29efac50bc4c78fd03d660ca4d66c118bfb967a104694ae27846b"
+        },
+        {
+          "fold": 2,
+          "split": "outputs/cv5_seed42/fold2.json",
+          "output": "outputs/cv5_quarter/fold2",
+          "checkpoint": "saved_models/cv5_quarter/fold2",
+          "split_sha256": "edf24a88cca37af5ba9149e853fb9ae5211639a8343c398489e190c3c22de7d2",
+          "best_epoch": 3.0,
+          "validation_macro_f1": 0.9150482327917788,
+          "training_seconds": 951.8363438000088,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "d51f9ec06704f05dbdd288055a4ab4e1050549a3fc2f96d2060e725971156d0a",
+            "model.safetensors": "cb31c9753f0dcb1f33b5d3552bac3d8a5113bd2a3fe5154f66033dbbae1cf33e",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "60ecc843be217a36df41c3682b6a3b86ebe2319e042890b8df5d0dcbe307fe62"
+        },
+        {
+          "fold": 3,
+          "split": "outputs/cv5_seed42/fold3.json",
+          "output": "outputs/cv5_quarter/fold3",
+          "checkpoint": "saved_models/cv5_quarter/fold3",
+          "split_sha256": "e47d58876ca946d3118c5dfdd36260f9dd3937d5b97f2e455d1196dd63650860",
+          "best_epoch": 3.0,
+          "validation_macro_f1": 0.8818085011129199,
+          "training_seconds": 956.1386334000272,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "cd6dd12ce79e4f4eb1e796fb0011537871d5ff0780c541ae1f75e8768cd78bc2",
+            "model.safetensors": "35618b18732e6ca836954d62f006d60812fd2f2e5009371c8dc04b54ffaa3c74",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "11791799018e6f08700b4b26563b949ae16a1ec7365d575b745755273998b386"
+        },
+        {
+          "fold": 4,
+          "split": "outputs/cv5_seed42/fold4.json",
+          "output": "outputs/cv5_quarter/fold4",
+          "checkpoint": "saved_models/cv5_quarter/fold4",
+          "split_sha256": "01fa8ea5c59d6d048dc98450a24b44bc367769797f57a064cb785bfbc3fc51ec",
+          "best_epoch": 3.0,
+          "validation_macro_f1": 0.8716137498720876,
+          "training_seconds": 1044.0169818000286,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "b35c286291e1e673663860a9b34469b48f1c03a6155bb8aad5aecb8b777d264d",
+            "model.safetensors": "c65cf386ff21a62e4403c92be52264cac34b2573d1f20d909a86a807e18316c1",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "6e28e5ce76b031b05f65848cfc0ceec759468eb3d3a2fffe7fbcdcf54e699acd"
+        }
+      ],
+      "oof_output": "outputs/cv5_quarter_oof",
+      "report": "docs/reports/CV5_Quarter_Report.md",
+      "submission": {
+        "path": "outputs/cv5_quarter_oof/submissions/cv5_folds012_mean.csv",
+        "sha256": "a122c68fcaa8f56e87a22a42ecd6832f720c5281366ad173b7dd1f82ee79f496",
+        "submission_status": "not_submitted"
+      },
+      "kaggle_macro_f1": null,
+      "decision": "與 cv5_sqrt 配對比較：差異不顯著（95% 區間含 0），後續基準維持 sqrt",
+      "comparison": {
+        "path": "outputs/cv5_compare_sqrt_vs_quarter.json",
+        "a": "cv5_sqrt",
+        "b": "cv5_quarter",
+        "sha256": "83b2fc5eb420e4e2cdf684276de3814dfc2c5c790124b8cae6807993f2a745b9",
+        "delta": -0.0023213684540984714,
+        "delta_class_f1": {
+          "negative": -8.762028151898527e-05,
+          "neutral": -0.006307555932512865,
+          "positive": -0.0005689291482636749
+        },
+        "ci_low": -0.007134658420648951,
+        "ci_high": 0.002105656269495592,
+        "fraction_delta_le_0": 0.8435,
+        "resamples": 2000,
+        "bootstrap_seed": 20261116,
+        "b_wins_folds": 2,
+        "disagreement": {
+          "rows": 179,
+          "a_correct": 91,
+          "b_correct": 81
+        }
+      },
+      "oof": {
+        "macro_f1": 0.8879604524066056,
+        "classes": {
+          "negative": {
+            "precision": 0.9561964146531566,
+            "recall": 0.9638592080452546,
+            "f1": 0.9600125205415134
+          },
+          "neutral": {
+            "precision": 0.8203921568627451,
+            "recall": 0.7835205992509363,
+            "f1": 0.8015325670498085
+          },
+          "positive": {
+            "precision": 0.899236641221374,
+            "recall": 0.9054573405073021,
+            "f1": 0.9023362696284948
+          }
+        },
+        "confusion_matrix": [
+          [
+            6134,
+            166,
+            64
+          ],
+          [
+            221,
+            1046,
+            68
+          ],
+          [
+            60,
+            63,
+            1178
+          ]
+        ]
+      },
+      "fold_scores": {
+        "per_fold": [
+          0.8878611723749397,
+          0.8814672840119063,
+          0.9163775469622545,
+          0.8818085011129199,
+          0.8716137498720876
+        ],
+        "mean": 0.8878256508668216,
+        "sample_std": 0.016990237538860045
+      },
+      "original_validation_in_oof": {
+        "rows": 900,
+        "macro_f1": 0.9073777550355517
+      },
+      "ensemble_folds": [
+        0,
+        1,
+        2
+      ],
+      "submission_rows": 1000,
+      "source_sha256": {
+        "outputs/cv5_quarter_oof/oof_metrics.json": "f8e6b49676dfce1b43a488160a63e9bdc60040aa3172d36896e7a96f392d4bd9",
+        "outputs/cv5_quarter_oof/oof_predictions.csv": "1886c2d21348721e0aa79ec42a634c7f6052c2432eb72532c2086c47b74b4f9a",
+        "outputs/cv5_seed42/folds_manifest.json": "21e1f5ba3094e3a9ef6f75c9650486ce033b2d107ca3a2329635e09a9508e3ea"
+      }
+    },
+    {
+      "id": "cv5_sqrt_ep5",
+      "name": "五折 CV weighted_sqrt 5 epochs",
+      "fold_dir": "outputs/cv5_seed42",
+      "folds": [
+        {
+          "fold": 0,
+          "split": "outputs/cv5_seed42/fold0.json",
+          "output": "outputs/cv5_sqrt_ep5/fold0",
+          "checkpoint": "saved_models/cv5_sqrt_ep5/fold0",
+          "split_sha256": "db6e6ef472bcf62b78ea0e85656c37de12b328d85dfc076ff8f150de123c1395",
+          "best_epoch": 2.0,
+          "validation_macro_f1": 0.8811307320816884,
+          "training_seconds": 1643.2606392999878,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "c58001f1c16a51e266bdb3bfa9c14fa67d2f47e103f5108900c692086df4b7cd",
+            "model.safetensors": "d08dbec580ad717440c8d99b196d436f16157bb863ef1b30307ddd7c72ff1135",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "5075842633b8c46bb213f9713b60083c4e9c8153fa306f07ed3fe800bcf4311b"
+        },
+        {
+          "fold": 1,
+          "split": "outputs/cv5_seed42/fold1.json",
+          "output": "outputs/cv5_sqrt_ep5/fold1",
+          "checkpoint": "saved_models/cv5_sqrt_ep5/fold1",
+          "split_sha256": "3a0dd6e4fe38648ec88dd279fe9596b4d8f9b80d581ad6d1af14e7a8e1f458e8",
+          "best_epoch": 3.0,
+          "validation_macro_f1": 0.8856001899251952,
+          "training_seconds": 1658.1820230999729,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "dca8994e1ee5653ba84b3bf9ff00252f05e9ebbb5dd9c5d5e399525988d9ffa2",
+            "model.safetensors": "04f8fca248273f56cb39317e5e9824caf3f187aaadcb26e5d6ac71b436710aaf",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "1e06bbf1a18508e4106528da0f6121744ce375a8d69c51a83895ab80fc780cd6"
+        },
+        {
+          "fold": 2,
+          "split": "outputs/cv5_seed42/fold2.json",
+          "output": "outputs/cv5_sqrt_ep5/fold2",
+          "checkpoint": "saved_models/cv5_sqrt_ep5/fold2",
+          "split_sha256": "edf24a88cca37af5ba9149e853fb9ae5211639a8343c398489e190c3c22de7d2",
+          "best_epoch": 5.0,
+          "validation_macro_f1": 0.9184931285885695,
+          "training_seconds": 1820.869279799983,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "5808c52616b2879d65f20f9fed030cc978644e927d713e8785b4116a083d4d04",
+            "model.safetensors": "d0eff19f6dc6f7f8e1b147fbf2287c7c2df960facae3042e43e3a650bf0a961c",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "64f9f8af1ce202ce5eed0edf1a6d503a7f2825880512e56ac0f0776e6db96f3a"
+        },
+        {
+          "fold": 3,
+          "split": "outputs/cv5_seed42/fold3.json",
+          "output": "outputs/cv5_sqrt_ep5/fold3",
+          "checkpoint": "saved_models/cv5_sqrt_ep5/fold3",
+          "split_sha256": "e47d58876ca946d3118c5dfdd36260f9dd3937d5b97f2e455d1196dd63650860",
+          "best_epoch": 5.0,
+          "validation_macro_f1": 0.8910578237045635,
+          "training_seconds": 1638.1525329999859,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "84e715b8377ebf4128b1e3176bd2d19fef9cd852aa1ba5dcbb8b98f57c063b6e",
+            "model.safetensors": "409ee515566581d0ffc29c225e4ce5a75af7ac525a43125f7eaa5ded9576f62b",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "f8530f52fd49a63280cce603effb7ae12913860999ebf5a48879f4d5bb5e75db"
+        },
+        {
+          "fold": 4,
+          "split": "outputs/cv5_seed42/fold4.json",
+          "output": "outputs/cv5_sqrt_ep5/fold4",
+          "checkpoint": "saved_models/cv5_sqrt_ep5/fold4",
+          "split_sha256": "01fa8ea5c59d6d048dc98450a24b44bc367769797f57a064cb785bfbc3fc51ec",
+          "best_epoch": 5.0,
+          "validation_macro_f1": 0.884561146750649,
+          "training_seconds": 1702.4811532000313,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "30a9a9fb62026d4e04240fad62bf7716a32d6cc21d58a505c00c6480dd21bac6",
+            "model.safetensors": "f143b6d3be111a32a884823d91491f9eb4f8581f58770cbe87c554f62035b7fa",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "01721a44f531d23b569a3c8e53becc31fd5a19e846e7c58f85134c0dd85d3cc4"
+        }
+      ],
+      "oof_output": "outputs/cv5_sqrt_ep5_oof",
+      "report": "docs/reports/CV5_Sqrt_Ep5_Report.md",
+      "submission": {
+        "path": "outputs/cv5_sqrt_ep5_oof/submissions/cv5_folds012_mean.csv",
+        "sha256": "351963b9048f12b5c3fdc8c37d52e4db832361d83d257ebd32449afcb3d1d988",
+        "submission_status": "user_reported"
+      },
+      "kaggle_macro_f1": 0.8971,
+      "score_reported_on": "2026-11-16",
+      "score_provenance": "User reported in chat; not independently verified on Kaggle",
+      "decision": "與 cv5_sqrt 配對比較：差異不顯著（95% 區間含 0）；依預先規則取 OOF 較高者，成為後續基準",
+      "comparison": {
+        "path": "outputs/cv5_compare_sqrt_vs_sqrt_ep5.json",
+        "a": "cv5_sqrt",
+        "b": "cv5_sqrt_ep5",
+        "sha256": "6a544be7bc1fb78a34863e842e2e8801f0fdadd6dd0709ac14f98380a4d8edf9",
+        "delta": 0.001943068541518489,
+        "delta_class_f1": {
+          "negative": 8.135021975874679e-05,
+          "neutral": -0.0003677630890692729,
+          "positive": 0.006115618493866104
+        },
+        "ci_low": -0.0037705336476704238,
+        "ci_high": 0.007610318070591929,
+        "fraction_delta_le_0": 0.269,
+        "resamples": 2000,
+        "bootstrap_seed": 20261116,
+        "b_wins_folds": 3,
+        "disagreement": {
+          "rows": 292,
+          "a_correct": 134,
+          "b_correct": 141
+        }
+      },
+      "oof": {
+        "macro_f1": 0.8922248894022226,
+        "classes": {
+          "negative": {
+            "precision": 0.9560679233525471,
+            "recall": 0.9643306096794468,
+            "f1": 0.9601814910427912
+          },
+          "neutral": {
+            "precision": 0.8222049689440993,
+            "recall": 0.7932584269662921,
+            "f1": 0.8074723598932521
+          },
+          "positive": {
+            "precision": 0.9118329466357309,
+            "recall": 0.9062259800153728,
+            "f1": 0.9090208172706246
+          }
+        },
+        "confusion_matrix": [
+          [
+            6137,
+            170,
+            57
+          ],
+          [
+            219,
+            1059,
+            57
+          ],
+          [
+            63,
+            59,
+            1179
+          ]
+        ]
+      },
+      "fold_scores": {
+        "per_fold": [
+          0.8811307320816884,
+          0.8856001899251952,
+          0.9184931285885695,
+          0.8910578237045635,
+          0.884561146750649
+        ],
+        "mean": 0.8921686042101331,
+        "sample_std": 0.015141553036452187
+      },
+      "original_validation_in_oof": {
+        "rows": 900,
+        "macro_f1": 0.9042061039964288
+      },
+      "ensemble_folds": [
+        0,
+        1,
+        2
+      ],
+      "submission_rows": 1000,
+      "source_sha256": {
+        "outputs/cv5_sqrt_ep5_oof/oof_metrics.json": "13d4caaa34946060c4f33274b5abfda8bb8a1b9ac52835c51175ec4a104ff480",
+        "outputs/cv5_sqrt_ep5_oof/oof_predictions.csv": "2bd407bd19687c233dc3e6c9839cac63270d221e24909ba9059cd580427b37a0",
+        "outputs/cv5_seed42/folds_manifest.json": "21e1f5ba3094e3a9ef6f75c9650486ce033b2d107ca3a2329635e09a9508e3ea"
+      }
+    },
+    {
+      "id": "cv5_sqrt_ep5_drop90",
+      "name": "五折 CV weighted_sqrt 5 epochs 排除 473 筆高信心不一致樣本",
+      "fold_dir": "outputs/cv5_seed42",
+      "folds": [
+        {
+          "fold": 0,
+          "split": "outputs/cv5_seed42/fold0.json",
+          "output": "outputs/cv5_sqrt_ep5_drop90/fold0",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_drop90/fold0",
+          "split_sha256": "db6e6ef472bcf62b78ea0e85656c37de12b328d85dfc076ff8f150de123c1395",
+          "best_epoch": 5.0,
+          "validation_macro_f1": 0.8869999085298191,
+          "training_seconds": 1751.3886383999488,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "a5609fac5f5e4ba56bf8e571af9411a60eca94d25dbe028cecf3cce20600dc5d",
+            "model.safetensors": "2f9e2fd7dff7979324b8dca0e95f91db054bb457f025365c691c123f8fc5d54b",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "ae5c2e65794d8a478f0a80fed85572e4de1cb12e2b31191a3479e979e66c74e7"
+        },
+        {
+          "fold": 1,
+          "split": "outputs/cv5_seed42/fold1.json",
+          "output": "outputs/cv5_sqrt_ep5_drop90/fold1",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_drop90/fold1",
+          "split_sha256": "3a0dd6e4fe38648ec88dd279fe9596b4d8f9b80d581ad6d1af14e7a8e1f458e8",
+          "best_epoch": 5.0,
+          "validation_macro_f1": 0.8910129943171876,
+          "training_seconds": 1589.540608900017,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "64524aab49a4033ad538ea09cf4c5aebed17d866e5a6e64626e517c4e5a421a2",
+            "model.safetensors": "393d56d9580fed8343896788352f12cd7ecc864f63c5216cd865dd1d05b220e2",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "bfbb5aed5ab76a2d68e833eb6b46eb565f9670b3fff6586c79d5a85793f56acd"
+        },
+        {
+          "fold": 2,
+          "split": "outputs/cv5_seed42/fold2.json",
+          "output": "outputs/cv5_sqrt_ep5_drop90/fold2",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_drop90/fold2",
+          "split_sha256": "edf24a88cca37af5ba9149e853fb9ae5211639a8343c398489e190c3c22de7d2",
+          "best_epoch": 4.0,
+          "validation_macro_f1": 0.9211854855619458,
+          "training_seconds": 1689.4719728999771,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "05bc8c2329d1d0335099f85db9f3a44f11f588e7e3b65195c37e254a09c8821a",
+            "model.safetensors": "ef7670d3a5af20d023684f231b84a737b2ae2f3d665ade70b5297ae079678819",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "eb9e3dc0167536ddd3be77feb191686492b19ccf1b4b186c66be16da8ea069b4"
+        },
+        {
+          "fold": 3,
+          "split": "outputs/cv5_seed42/fold3.json",
+          "output": "outputs/cv5_sqrt_ep5_drop90/fold3",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_drop90/fold3",
+          "split_sha256": "e47d58876ca946d3118c5dfdd36260f9dd3937d5b97f2e455d1196dd63650860",
+          "best_epoch": 5.0,
+          "validation_macro_f1": 0.8908776776134154,
+          "training_seconds": 1573.71050070005,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "44107ec127796195d69836d34e6d2d7dc5b4b1eb1ca0c7fc2ad780c230b9d7a2",
+            "model.safetensors": "f590a39538e63c8f0005f93e6ed578965c69ff6ad8147560c2a00f5a5205fc8e",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "a9ac0cd721358442d455d39ccfa73e48f8a8dc165ebaad85c75469eec8c3251c"
+        },
+        {
+          "fold": 4,
+          "split": "outputs/cv5_seed42/fold4.json",
+          "output": "outputs/cv5_sqrt_ep5_drop90/fold4",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_drop90/fold4",
+          "split_sha256": "01fa8ea5c59d6d048dc98450a24b44bc367769797f57a064cb785bfbc3fc51ec",
+          "best_epoch": 4.0,
+          "validation_macro_f1": 0.8768778335361654,
+          "training_seconds": 1578.1355283999583,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "b09e0fe26818e1fb93e9fb9e64e50bb6937dc93462bd1ce88afc2eadb3534a4e",
+            "model.safetensors": "84ae42ee9e33d788e858b0e6c1847f469ef57fc022897ebf0f9c820c11096bdb",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "79385b3fa00d08c7c4981d081240641ff3b145a138fcbcb9f73fbc4a8377854c"
+        }
+      ],
+      "oof_output": "outputs/cv5_sqrt_ep5_drop90_oof",
+      "report": "docs/reports/CV5_Drop90_Report.md",
+      "submission": {
+        "path": "outputs/cv5_sqrt_ep5_drop90_oof/submissions/cv5_folds012_mean.csv",
+        "sha256": "a112b5c89e62e39e072b9914d3641ae22d08021a1dc47676aa55338ab0c488d4",
+        "submission_status": "not_submitted"
+      },
+      "kaggle_macro_f1": null,
+      "decision": "與 cv5_sqrt_ep5 配對比較：OOF Δ +0.12 個百分點，95% 區間含 0，未達預先登記門檻 +0.5；不列候選、停止錯標排除方向、不提交 Kaggle",
+      "comparison": {
+        "path": "outputs/cv5_compare_ep5_vs_drop90.json",
+        "a": "cv5_sqrt_ep5",
+        "b": "cv5_sqrt_ep5_drop90",
+        "sha256": "a52148cbc75faa0cb9c8d5c096aa20703cc8b7631fdd569536615eab1dc42fd7",
+        "delta": 0.0012206496589246552,
+        "delta_class_f1": {
+          "negative": 0.0006165761382547208,
+          "neutral": 0.0035296047432902267,
+          "positive": -0.00048423190477087097
+        },
+        "ci_low": -0.0049227296873955075,
+        "ci_high": 0.007595303611175723,
+        "fraction_delta_le_0": 0.351,
+        "resamples": 2000,
+        "bootstrap_seed": 20261116,
+        "b_wins_folds": 3,
+        "disagreement": {
+          "rows": 361,
+          "a_correct": 163,
+          "b_correct": 176
+        }
+      },
+      "oof": {
+        "macro_f1": 0.8934455390611472,
+        "classes": {
+          "negative": {
+            "precision": 0.9531467450131437,
+            "recall": 0.9685732243871779,
+            "f1": 0.9607980671810459
+          },
+          "neutral": {
+            "precision": 0.8528925619834711,
+            "recall": 0.7730337078651686,
+            "f1": 0.8110019646365423
+          },
+          "positive": {
+            "precision": 0.9009826152683296,
+            "recall": 0.9162182936202921,
+            "f1": 0.9085365853658537
+          }
+        },
+        "confusion_matrix": [
+          [
+            6164,
+            130,
+            70
+          ],
+          [
+            242,
+            1032,
+            61
+          ],
+          [
+            61,
+            48,
+            1192
+          ]
+        ]
+      },
+      "fold_scores": {
+        "per_fold": [
+          0.8869999085298191,
+          0.8910129943171876,
+          0.9211854855619458,
+          0.8908776776134154,
+          0.8768778335361654
+        ],
+        "mean": 0.8933907799117067,
+        "sample_std": 0.016568311959128057
+      },
+      "original_validation_in_oof": {
+        "rows": 900,
+        "macro_f1": 0.905563440938482
+      },
+      "ensemble_folds": [
+        0,
+        1,
+        2
+      ],
+      "submission_rows": 1000,
+      "source_sha256": {
+        "outputs/cv5_sqrt_ep5_drop90_oof/oof_metrics.json": "d9635a4d90f6c1026cb16932d45fbdae1108ca38210813a37119b4ef7abff630",
+        "outputs/cv5_sqrt_ep5_drop90_oof/oof_predictions.csv": "6537b826ae21b6070c920012ad4e2147d9d6b95b02a735c2cd66f0864905b98f",
+        "outputs/cv5_seed42/folds_manifest.json": "21e1f5ba3094e3a9ef6f75c9650486ce033b2d107ca3a2329635e09a9508e3ea"
+      }
+    },
+    {
+      "id": "cv5_sqrt_ep5_mlm10",
+      "name": "五折 CV weighted_sqrt 5 epochs 微調自各折 MLM 續訓 10 epochs 權重（僅用該折訓練子集文字）",
+      "fold_dir": "outputs/cv5_seed42",
+      "folds": [
+        {
+          "fold": 0,
+          "split": "outputs/cv5_seed42/fold0.json",
+          "output": "outputs/cv5_sqrt_ep5_mlm10/fold0",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_mlm10/fold0",
+          "split_sha256": "db6e6ef472bcf62b78ea0e85656c37de12b328d85dfc076ff8f150de123c1395",
+          "best_epoch": 5.0,
+          "validation_macro_f1": 0.893095225335807,
+          "training_seconds": 1888.8972848000121,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "aabf31d1837e536d24bdfd436ceb50ec2cdeec66839c092c8d8201e74859a550",
+            "model.safetensors": "94398671f3ad64142bfb2eb144e9d5ef04c088b6563aa6e142cc69317d211122",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "2aae14bd2dc7e34b209fa58f596e0409b4ebb949eaf93f804462573bb07c38bc"
+        },
+        {
+          "fold": 1,
+          "split": "outputs/cv5_seed42/fold1.json",
+          "output": "outputs/cv5_sqrt_ep5_mlm10/fold1",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_mlm10/fold1",
+          "split_sha256": "3a0dd6e4fe38648ec88dd279fe9596b4d8f9b80d581ad6d1af14e7a8e1f458e8",
+          "best_epoch": 1.0,
+          "validation_macro_f1": 0.8960132535679017,
+          "training_seconds": 1988.6504599999753,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "b8b240ac45d5779f44f8ceb6472bbd4138109df7f09223c1296fead8999e4715",
+            "model.safetensors": "68e7ec6a848d9e52e83a71158e3c1989e78fcaff03603d03054c67c323bc1b31",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "bc75169c1e59a1ab7e2c9f3471c2db2d93ee5da2e3b08daa079cb54edb5ef1ab"
+        },
+        {
+          "fold": 2,
+          "split": "outputs/cv5_seed42/fold2.json",
+          "output": "outputs/cv5_sqrt_ep5_mlm10/fold2",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_mlm10/fold2",
+          "split_sha256": "edf24a88cca37af5ba9149e853fb9ae5211639a8343c398489e190c3c22de7d2",
+          "best_epoch": 5.0,
+          "validation_macro_f1": 0.9227795886331487,
+          "training_seconds": 2223.8196367000346,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "321a9e59379510e40e204bbe4170345c47f07581d91da0471c16a9646d2e492b",
+            "model.safetensors": "5c0f96f0a2acaa537017b170f0da8399a78f7607ca8b11a63b1d674c51ecfad5",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "5ca7ed40b98feb75408a768000e71f9a0161f8e3728bb28e7a0c904608faea9f"
+        },
+        {
+          "fold": 3,
+          "split": "outputs/cv5_seed42/fold3.json",
+          "output": "outputs/cv5_sqrt_ep5_mlm10/fold3",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_mlm10/fold3",
+          "split_sha256": "e47d58876ca946d3118c5dfdd36260f9dd3937d5b97f2e455d1196dd63650860",
+          "best_epoch": 4.0,
+          "validation_macro_f1": 0.8891570652111046,
+          "training_seconds": 1789.2337262000074,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "bfa5c4fd2495a5f80ea6b405778f1a2ae46e4f51cd0ccb197dd47bf3c17a8a9b",
+            "model.safetensors": "be3fd7471fcd777d739db20a1fd5d0ad8cb568b1b7243175574148f103ea20c0",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "971fb9af5b3c7990a052df7fc53f19b8388a0ee4061437491656d9c52990d637"
+        },
+        {
+          "fold": 4,
+          "split": "outputs/cv5_seed42/fold4.json",
+          "output": "outputs/cv5_sqrt_ep5_mlm10/fold4",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_mlm10/fold4",
+          "split_sha256": "01fa8ea5c59d6d048dc98450a24b44bc367769797f57a064cb785bfbc3fc51ec",
+          "best_epoch": 4.0,
+          "validation_macro_f1": 0.8807718950153162,
+          "training_seconds": 1674.0815206000116,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "796b0042caa89fdfaa2b29d56f2d0aa06664b31c885d0615f0931e70d36428d1",
+            "model.safetensors": "2e15f3ff7d668c1944ed1858b7d856dd83601578cdd2cd57a6f7b3f9cf9c8ad3",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "97ab9c3c5348059f564d3ad8c5df5afd2b4ef47b7f6e09c284b85a1000454fdd"
+        }
+      ],
+      "oof_output": "outputs/cv5_sqrt_ep5_mlm10_oof",
+      "report": "docs/reports/CV5_MLM10_Report.md",
+      "submission": {
+        "path": "outputs/cv5_sqrt_ep5_mlm10_oof/submissions/cv5_folds012_mean.csv",
+        "sha256": "ad1124f0a7cca3f9722c0627c652ec8f3084a9304c807c7cbc1ffadb5a890755",
+        "submission_status": "user_reported"
+      },
+      "kaggle_macro_f1": 0.9152,
+      "score_reported_on": "2026-11-17",
+      "score_provenance": "User reported in chat; not independently verified on Kaggle; attributed to mlm10 ensemble by upload timing (inferred)",
+      "decision": "與 cv5_sqrt_ep5 配對比較：OOF Δ +0.41 個百分點（95% 區間 [-0.21, +1.06] 含 0），未達預先登記門檻 +0.5；不列候選、不提交 Kaggle，待與使用者討論後續",
+      "comparison": {
+        "path": "outputs/cv5_compare_ep5_vs_mlm10.json",
+        "a": "cv5_sqrt_ep5",
+        "b": "cv5_sqrt_ep5_mlm10",
+        "sha256": "b54743f322fbc9d0c2dc85abfb42866be642815506558fe33702a10aa215ced7",
+        "delta": 0.004082795904183145,
+        "delta_class_f1": {
+          "negative": 0.0013088032590247156,
+          "neutral": 0.00910014481484589,
+          "positive": 0.0018394396386787193
+        },
+        "ci_low": -0.0020869371863105808,
+        "ci_high": 0.010582696276393593,
+        "fraction_delta_le_0": 0.103,
+        "resamples": 2000,
+        "bootstrap_seed": 20261116,
+        "b_wins_folds": 3,
+        "disagreement": {
+          "rows": 366,
+          "a_correct": 163,
+          "b_correct": 184
+        }
+      },
+      "oof": {
+        "macro_f1": 0.8963076853064057,
+        "classes": {
+          "negative": {
+            "precision": 0.9578914535246413,
+            "recall": 0.9651162790697675,
+            "f1": 0.9614902943018159
+          },
+          "neutral": {
+            "precision": 0.8212121212121212,
+            "recall": 0.8119850187265918,
+            "f1": 0.816572504708098
+          },
+          "positive": {
+            "precision": 0.9227129337539433,
+            "recall": 0.8993082244427364,
+            "f1": 0.9108602569093033
+          }
+        },
+        "confusion_matrix": [
+          [
+            6142,
+            169,
+            53
+          ],
+          [
+            206,
+            1084,
+            45
+          ],
+          [
+            64,
+            67,
+            1170
+          ]
+        ]
+      },
+      "fold_scores": {
+        "per_fold": [
+          0.893095225335807,
+          0.8960132535679017,
+          0.9227795886331487,
+          0.8891570652111046,
+          0.8807718950153162
+        ],
+        "mean": 0.8963634055526556,
+        "sample_std": 0.015840177388831454
+      },
+      "original_validation_in_oof": {
+        "rows": 900,
+        "macro_f1": 0.9088997939247051
+      },
+      "ensemble_folds": [
+        0,
+        1,
+        2
+      ],
+      "submission_rows": 1000,
+      "source_sha256": {
+        "outputs/cv5_sqrt_ep5_mlm10_oof/oof_metrics.json": "8734acff9eda066fe96670c9462f50cf6dbbd82dd98a31364d7cbba38f49a2ad",
+        "outputs/cv5_sqrt_ep5_mlm10_oof/oof_predictions.csv": "31ab3fa84b695cd1b82d6aa9a0a1b1c1361150e9920609858d37c9ed771b3a81",
+        "outputs/cv5_seed42/folds_manifest.json": "21e1f5ba3094e3a9ef6f75c9650486ce033b2d107ca3a2329635e09a9508e3ea"
+      }
+    },
+    {
+      "id": "cv5_sqrt_ep5_mlmall30",
+      "name": "五折 CV weighted_sqrt 5 epochs 微調自共用 MLM 續訓 30 epochs 權重（續訓語料為全部 9,000 筆文字，非嚴格 OOF）",
+      "fold_dir": "outputs/cv5_seed42",
+      "folds": [
+        {
+          "fold": 0,
+          "split": "outputs/cv5_seed42/fold0.json",
+          "output": "outputs/cv5_sqrt_ep5_mlmall30/fold0",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_mlmall30/fold0",
+          "split_sha256": "db6e6ef472bcf62b78ea0e85656c37de12b328d85dfc076ff8f150de123c1395",
+          "best_epoch": 4.0,
+          "validation_macro_f1": 0.9007709448536545,
+          "training_seconds": 1947.587514600018,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "ece62e85ad15b46f5eab4c00c2f9a05773f764bd4bfd428948857238789c898a",
+            "model.safetensors": "5627ff18084432b5e0c1067029a6e477d78b44213ba63601e6657a64cb8e058a",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "4f960d930c1b79cd153cd8f1965d04d738ebb2954f4bb4be76cb631b4fec1ddb"
+        },
+        {
+          "fold": 1,
+          "split": "outputs/cv5_seed42/fold1.json",
+          "output": "outputs/cv5_sqrt_ep5_mlmall30/fold1",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_mlmall30/fold1",
+          "split_sha256": "3a0dd6e4fe38648ec88dd279fe9596b4d8f9b80d581ad6d1af14e7a8e1f458e8",
+          "best_epoch": 4.0,
+          "validation_macro_f1": 0.8996833369386228,
+          "training_seconds": 1888.6914070000057,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "eef1fa38a36f6266be9708baee291650d5fe4b32d5df0d4f2b9b0574518a4f8a",
+            "model.safetensors": "ee597b85c96b25c893d07a7a97c711c9036b8129ca993a35762ba0f4df23deed",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "bd2ab4261c6069e9391b7fee97de5cff4b53eeed466de47ec79651b8589ba17d"
+        },
+        {
+          "fold": 2,
+          "split": "outputs/cv5_seed42/fold2.json",
+          "output": "outputs/cv5_sqrt_ep5_mlmall30/fold2",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_mlmall30/fold2",
+          "split_sha256": "edf24a88cca37af5ba9149e853fb9ae5211639a8343c398489e190c3c22de7d2",
+          "best_epoch": 5.0,
+          "validation_macro_f1": 0.9242617547439598,
+          "training_seconds": 1951.8244641999481,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "812764b9734650a3dfb0fb3d59d74a5f581179bb71a65c5c0648a9b8887dac28",
+            "model.safetensors": "437f97e790c18e363d2553ef9188cca4de93e68694adb0c334561c34ef3beadf",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "66616df837e5166e1600fd7d6a85e8c9b26b40d6f0740bbd867faa60f2da6b02"
+        },
+        {
+          "fold": 3,
+          "split": "outputs/cv5_seed42/fold3.json",
+          "output": "outputs/cv5_sqrt_ep5_mlmall30/fold3",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_mlmall30/fold3",
+          "split_sha256": "e47d58876ca946d3118c5dfdd36260f9dd3937d5b97f2e455d1196dd63650860",
+          "best_epoch": 2.0,
+          "validation_macro_f1": 0.8987599948971049,
+          "training_seconds": 1896.9819877999835,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "4fa3c124851b28b4beb7600d5058cc81862396e781ce235b72b5a57fc1b8e05e",
+            "model.safetensors": "5f6327e9058a4a13a262091d3c97c97512bdde57b3b1dafd0660f325240b2bf1",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "20665c4729da522d4f095550b95d14a970d0d167db8f395c1509ac2667451e8c"
+        },
+        {
+          "fold": 4,
+          "split": "outputs/cv5_seed42/fold4.json",
+          "output": "outputs/cv5_sqrt_ep5_mlmall30/fold4",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_mlmall30/fold4",
+          "split_sha256": "01fa8ea5c59d6d048dc98450a24b44bc367769797f57a064cb785bfbc3fc51ec",
+          "best_epoch": 4.0,
+          "validation_macro_f1": 0.8861140557506064,
+          "training_seconds": 1912.2699584999937,
+          "checkpoint_files_sha256": {
+            "config.json": "807130b82e60912e019168ff9bad83535f5bca0354595dbc489f8d89f0e0d7a2",
+            "training_config.json": "4644ca8ae46bd4cb3510187359678a5cbe9ea48403422d693965cb1cf1004cc7",
+            "model.safetensors": "09786bb9d15f5965d03db7d6f348762e60aaeea9f776ab371295a67641f61fc4",
+            "tokenizer.json": "8406160b692103eb0af606ffd0d7963678491aa8719a131fd165927e64eb5416",
+            "tokenizer_config.json": "87ad1b9152a48db68810172cbd14ab6983a177e4393fb567c0dd189ad4af5dfe",
+            "special_tokens_map.json": "3c3507f36dff57bce437223db3b3081d1e2b52ec3e56ee55438193ecb2c94dd6",
+            "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+          },
+          "summary_sha256": "1e4af39aaa23f79228f9f4482896b4dab785fc101d207a7560ad5cc7425ebf3d"
+        }
+      ],
+      "oof_output": "outputs/cv5_sqrt_ep5_mlmall30_oof",
+      "report": "docs/reports/CV5_MLMAll30_Report.md",
+      "submission": {
+        "path": "outputs/cv5_sqrt_ep5_mlmall30_oof/submissions/cv5_folds012_mean.csv",
+        "sha256": "80f97a038780e90d0df7123325bee8284fd27eb2f4e048cbfef2e1977622797c",
+        "submission_status": "user_reported"
+      },
+      "kaggle_macro_f1": 0.9142,
+      "score_reported_on": "2026-11-19",
+      "score_provenance": "User reported in chat 2026-11-19; not independently verified on Kaggle",
+      "decision": "預先登記判斷：Kaggle 0.9142 < 0.9152，主版本維持 cv5_sqrt_ep5_mlm10；不延伸此線。差距遠小於單次 Kaggle 雜訊，且一次改了語料範圍與 epoch 數兩個因素；待與使用者討論後續",
+      "comparison": {
+        "path": "outputs/cv5_compare_mlm10_vs_mlmall30.json",
+        "a": "cv5_sqrt_ep5_mlm10",
+        "b": "cv5_sqrt_ep5_mlmall30",
+        "sha256": "5334f7f663e86bcff78b773f5eceec1374bc1d469b2da6a8ab0c2c3df6c750b3",
+        "delta": 0.005826472856487186,
+        "delta_class_f1": {
+          "negative": 0.0027898247644538854,
+          "neutral": 0.011198880025312108,
+          "positive": 0.0034907137796955645
+        },
+        "ci_low": -0.0005431633300296945,
+        "ci_high": 0.011600610400206431,
+        "fraction_delta_le_0": 0.0385,
+        "resamples": 2000,
+        "bootstrap_seed": 20261116,
+        "b_wins_folds": 5,
+        "disagreement": {
+          "rows": 326,
+          "a_correct": 135,
+          "b_correct": 174
+        }
+      },
+      "notes": "non-strict OOF：MLM 續訓語料含各折驗證文字（不含標籤），OOF 偏樂觀，只作參考；判斷以 Kaggle 為主",
+      "oof": {
+        "macro_f1": 0.9021341581628929,
+        "classes": {
+          "negative": {
+            "precision": 0.9614183067791315,
+            "recall": 0.9671590194846009,
+            "f1": 0.9642801190662698
+          },
+          "neutral": {
+            "precision": 0.8482704402515723,
+            "recall": 0.8082397003745319,
+            "f1": 0.82777138473341
+          },
+          "positive": {
+            "precision": 0.9057315233785822,
+            "recall": 0.9231360491929285,
+            "f1": 0.9143509706889988
+          }
+        },
+        "confusion_matrix": [
+          [
+            6155,
+            145,
+            64
+          ],
+          [
+            195,
+            1079,
+            61
+          ],
+          [
+            52,
+            48,
+            1201
+          ]
+        ]
+      },
+      "fold_scores": {
+        "per_fold": [
+          0.9007709448536545,
+          0.8996833369386228,
+          0.9242617547439598,
+          0.8996011142858177,
+          0.8861140557506064
+        ],
+        "mean": 0.9020862413145322,
+        "sample_std": 0.013788980365819395
+      },
+      "original_validation_in_oof": {
+        "rows": 900,
+        "macro_f1": 0.9093272284262334
+      },
+      "ensemble_folds": [
+        0,
+        1,
+        2
+      ],
+      "submission_rows": 1000,
+      "source_sha256": {
+        "outputs/cv5_sqrt_ep5_mlmall30_oof/oof_metrics.json": "54968be5974a9bc0f5ca19dfcbd20897258fd2f9bef50aeecab81f4355eca3ac",
+        "outputs/cv5_sqrt_ep5_mlmall30_oof/oof_predictions.csv": "57c4543d3aea28b9f4458921bf4d82c7fae28c2309ecb6defd10989bcb7d2aad",
         "outputs/cv5_seed42/folds_manifest.json": "21e1f5ba3094e3a9ef6f75c9650486ce033b2d107ca3a2329635e09a9508e3ea"
       }
     }

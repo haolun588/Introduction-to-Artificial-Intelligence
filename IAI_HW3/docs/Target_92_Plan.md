@@ -1,8 +1,97 @@
 # Kaggle 92% 改進計畫
 
-制定：2026/11/14；更新：2026/11/16（新研究路線）。Kaggle 目標 ≥0.9200，目前最高使用者回報 0.9122。A、B、C1、C2 均已完成；FGSM 兩設定驗證均未改善，停止幅度搜尋。步驟 1（logit 偏移校正）與步驟 2（五折 CV）已完成；下一項為步驟 3（以 CV 重比設定）。
+制定：2026/11/14；更新：2026/11/17（第二次路線調整）。Kaggle 目標 ≥0.9200，目前最高使用者回報 0.9152（cv5_sqrt_ep5_mlm10 集成；非 MLM 最高為 weighted_quarter 0.9122）。A、B、C1、C2 均已完成；FGSM 兩設定驗證均未改善，停止幅度搜尋。步驟 1（logit 偏移校正）、步驟 2（五折 CV）、步驟 3a（sqrt vs quarter CV 重比）、步驟 3b（訓練長度 3 → 5 epochs）已完成；步驟 3c（label smoothing）已中止並由第二次調整取代，順序 0（上傳集成 CSV）已由使用者回報 Kaggle 0.8971（見「路線調整（2026-11-16，第二次）」），下一步待定。順序 2 錯標抽查已通過（[報告](reports/Label_Noise_Audit_Report.md)），`cv5_sqrt_ep5_drop90` 已完成（[報告](reports/CV5_Drop90_Report.md)）：OOF 89.34%，Δ +0.12 個百分點，未達預先登記門檻 +0.5，順序 2 已停止；順序 3 MLM 續訓完成（OOF 89.63%，Δ +0.41，未達門檻；Kaggle 0.9152）。下一步：方向 2（cv5_sqrt_ep5_mlmall30）已完成（[報告](reports/CV5_MLMAll30_Report.md)），Kaggle 0.9142 < 0.9152，依預先登記主版本維持 mlm10（目前最高仍為 mlm10 0.9152）；下一步待與使用者討論。
+
+## 路線調整（2026-11-16，第二次）
+
+本節取代下方「新研究路線」步驟 3 的後續（label smoothing／R-Drop，原步驟 3c 之後）與步驟 4；舊內容保留供對照。步驟 1、2、3a、3b 的結果與決策不變。
+
+**調整原因。**
+
+- (a) 近期單因素實驗（類別權重、訓練長度）預期效果約 0.1–0.3 個百分點，低於單 seed 五折 CV 約 0.5 個百分點的偵測力，結果幾乎注定不顯著（3a 的 Δ −0.23、3b 的 Δ +0.19 即為例，區間均含 0）。
+- (b) CV 線（OOF 89.22%）從未回 Kaggle 驗證，OOF 與 Kaggle（目前最佳使用者回報 0.9122）的對應未知；已知的 900 驗證與 Kaggle 排序不一致，OOF 是否較能預測 Kaggle 屬未驗證。
+- (c) 原計畫沒有停損規則，也沒有全部失敗時的退路。
+
+**規則。**
+
+- 只排預期效果 ≥0.5 個百分點的方向。
+- 每個方向至多 1 組 CV（5 次訓練）。
+- OOF Δ < +0.5 個百分點即停，換下一個方向。
+- 方向產生候選時，做 3 模型集成 CSV 交 Kaggle，同時累積 OOF 與 Kaggle 的對應資料。集成上限 3 個模型（作業紅線）。
+- 仍遵守作業紅線：只用提供資料、只用 bert-base-uncased、不用 benchmark 標籤或文字訓練。
+
+**順序。**
+
+| 順序 | 內容 | 說明 |
+|---|---|---|
+| 0 不訓練 | 上傳 `cv5_sqrt_ep5` 的 fold 0／1／2 等權集成 CSV：`outputs/cv5_sqrt_ep5_oof/submissions/cv5_folds012_mean.csv`（SHA-256 前 12 碼 `351963b9048f`，見 [實驗總表](Experiment_Results.md)） | 由使用者上傳 Kaggle 並回報分數；這是第一筆 OOF（89.22%）與 Kaggle 的對應資料。結果：Kaggle 0.8971（使用者回報，未經平台核驗）；OOF 89.22% |
+| 1 多 seed | 同設定（sqrt-inverse、5 epochs、同一份 `cv5_seed42` 切分）只改訓練 seed 為 43，跑一組 CV | 兩個 seed 的 OOF 機率平均後可直接在 OOF 上量測集成效果，並估計 seed 變異 |
+| 2 錯標降權 | 先用現有 OOF 找「高信心卻與標籤不同」的樣本（不需訓練），優先人工抽看 neutral；確認確有錯標後才跑一組 CV 降權 | 抽看結果若顯示並非錯標，則不訓練，直接換下一方向。結果：抽查通過（[報告](reports/Label_Noise_Audit_Report.md)；A+B annotation ≠ label 36/60 = 60%，C 組一致率 100%，|H| = 473），使用者選擇排除版本（w=0），預先登記見下「順序 2 預先登記」。**結果（`cv5_sqrt_ep5_drop90`，[報告](reports/CV5_Drop90_Report.md)）：OOF 89.34%（對照 89.22%），Δ +0.12 個百分點，paired bootstrap 95% [−0.49, +0.76]，fold 勝 3/5；未達門檻 +0.5，停止此方向，轉順序 3** |
+| 3 MLM 續訓 | 只用 train 文字做 MLM 續訓（benchmark 文字不可用） | 作業紅線：不得使用 benchmark 文字。已預先登記，見下 **結果（`cv5_sqrt_ep5_mlm10`，[報告](reports/CV5_MLM10_Report.md)）：OOF 89.63%（對照 89.22%），Δ +0.41 個百分點，paired bootstrap 95% [−0.21, +1.06]，fold 勝 3/5；未達門檻 +0.5，不列候選、不提交 Kaggle，待與使用者討論後續（備選或退路）；Kaggle 0.9152（使用者回報，目前最高）** |
+| 4 備選 | label smoothing、R-Drop、pooler penalized tanh | 原步驟 3c 預先登記的 label smoothing 見下，其 `cv5_sqrt_ep5_ls01` 已中止。penalized tanh（x>0 為 tanh(x)，x≤0 為 0.25·tanh(x)；Eger 等人 2018 EMNLP〈Is it Time to Swish?〉比較中跨 NLP 任務最穩定，但該比較為從零訓練的小型網路）：只替換 BERT pooler 的 tanh，encoder 的 GELU 不動（換掉會破壞預訓練權重，且有改動 base model 的合規疑慮）；預期效果 ±0.3 個百分點內（推測），低於單 seed CV 約 0.5 個百分點的偵測力。若執行：唯一變因為 pooler 激活，1 組 CV（約 2.5 小時，不需續訓），Δ < +0.5 即停；執行前另寫預先登記 |
+
+**退路。** 上述全部未達門檻（OOF Δ ≥ +0.5 個百分點，或 Kaggle 超越 0.9122）→ 交件採 Kaggle 最佳的 `weighted_quarter`（0.9122，使用者回報），並補做其獨立封裝與解壓推論演練（目前尚未演練）。
+
+**已驗證與推測的區分。** 已驗證：OOF 數字（sqrt ep3 89.03%、quarter 88.80%、sqrt ep5 89.22%）與 Kaggle 回報（weighted_quarter 0.9122、weighted_sqrt 0.9049）。推測：「單 seed 五折 CV 約只能偵測 ≥0.5 個百分點」、各方向預期增益、OOF 與 Kaggle 的對應關係，均待步驟 0 及後續資料檢驗。
+
+**順序 2 預先登記：cv5_sqrt_ep5_drop90（2026-11-16，訓練前寫下）**
+
+- 假設：OOF 高信心不一致樣本多含錯標或模糊標籤，自訓練集排除可改善 OOF／Kaggle。
+- 對照：`cv5_sqrt_ep5`（OOF 89.22%，Kaggle 集成 0.8971，使用者回報）；同切分 `cv5_seed42`、sqrt-inverse、5 epochs、seed 42。
+- 唯一變因：以 `--exclude-train-ids outputs/label_noise_audit_20261116/exclude_ids_p090.txt`（473 筆）自每折訓練子集排除；validation 不變。實作細節：類別權重依過濾後的訓練子集計算。
+- 指令：`bash tools/run_cv5.sh cv5_sqrt_ep5_drop90 sqrt-inverse 5 --exclude-train-ids outputs/label_noise_audit_20261116/exclude_ids_p090.txt`；比較 `python -m tools.compare_oof --a outputs/cv5_sqrt_ep5_oof --b outputs/cv5_sqrt_ep5_drop90_oof --output outputs/cv5_compare_ep5_vs_drop90.json`。
+- 預算：5 次訓練，不追加。
+- 決策規則（預先固定）：OOF Δ（drop90 − ep5）≥ +0.5 個百分點 → 列為候選，產生 fold 0／1／2 集成 CSV 交使用者上傳 Kaggle；Δ < +0.5 → 停止此方向，換順序 3。另外觀察 neutral recall（原 79.3%）是否下降（次要，不改決策）。
+- 已知偏誤：排除清單由 `cv5_sqrt_ep5` 的 OOF 產生，而產生每筆 OOF 的模型訓練時看過其他折的驗證資料，因此新 CV 的 OOF 對自身略偏樂觀（未量化）；Kaggle 不受此影響，最終以 Kaggle 為準。
+- 風險：A 組約 35% 的被排除樣本（14/40）原標籤可能正確（多為 neutral 問句），排除可能加重模型對 neutral 問句的負面偏誤。追加檢查（見[抽查報告](reports/Label_Noise_Audit_Report.md)）顯示此風險較原估計低，預先登記不變。
+
+**順序 2 結果與判定（2026-11-17，[報告](reports/CV5_Drop90_Report.md)）：** OOF Macro-F1 89.34%（對照 `cv5_sqrt_ep5` 89.22%），Δ +0.12 個百分點，paired bootstrap 95% [−0.49, +0.76]，fold 勝 3/5，最佳 epoch 5、5、4、5、4。未達預先固定門檻 +0.5 → 不列候選、停止錯標排除方向、不產生 Kaggle 提交（集成 CSV 由工具自動產生，狀態 `not_submitted`）；下一步為順序 3（MLM 續訓），待設計。次要觀察：neutral recall 79.3% → 77.3%（−2.0），neutral → negative 219 → 242；negative、positive recall 上升，與預先登記風險方向一致（推測排除也移除了部分標籤正確的 neutral 樣本，未檢驗）。已知偏誤（排除清單來自對照 OOF，新 OOF 略偏樂觀）偏向 drop90，仍未達門檻。
+
+**順序 3 預先登記：cv5_sqrt_ep5_mlm10（2026-11-17，訓練前寫下）**
+
+- 假設：只用各折訓練子集文字做 MLM 續訓（任務適應預訓練，TAPT），讓 BERT 適應航空推文語言，可提升分類；預期 +0.3～1 個百分點（推測，未驗證）。
+- 對照：`cv5_sqrt_ep5`（OOF 89.22%）；同切分 `cv5_seed42`、sqrt-inverse、5 epochs、seed 42。
+- 唯一變因：微調初始權重改為該折 MLM 續訓後的權重（分類頭仍新初始化）。
+- MLM 設定（預先固定、不調參）：起點 `google-bert/bert-base-uncased`；語料僅該折訓練子集文字（約 7,200 筆），前處理與微調相同；不用標籤、不用 benchmark 文字、不用 validation 文字；遮罩 15%（80/10/10）；lr 5e-5；warmup 6%；linear decay；weight decay 0.01；10 epochs；batch／累積／max_length 與微調相同；儲存最後一個 epoch，不做選擇；validation 文字只用來記錄 MLM eval loss。
+- 為何每折各自續訓：若用全部 9,000 筆文字續訓一次，每折 validation 文字已被看過，OOF 會被直接高估；每折各自續訓可避免此洩漏。最終交件模型（若成功）也只用原訓練子集 8,100 筆文字續訓。
+- 指令：先 `bash tools/run_cv5_mlm.sh cv5_sqrt_ep5_mlm10 sqrt-inverse 5 10 0`（fold 0 試跑），通過後 `bash tools/run_cv5_mlm.sh cv5_sqrt_ep5_mlm10 sqrt-inverse 5 10`；比較 `python -m tools.compare_oof --a outputs/cv5_sqrt_ep5_oof --b outputs/cv5_sqrt_ep5_mlm10_oof --output outputs/cv5_compare_ep5_vs_mlm10.json`。
+- fold 0 試跑：只檢查流程正常、MLM val loss 是否下降、實際耗時；**不以 fold 0 的分類分數做決策**。若 MLM val loss 未下降或流程異常，停下檢查，不繼續。
+- 預算：5 次 MLM 續訓 + 5 次微調，不追加；估計每折約 75 分鐘、整組 6–7 小時（推測，以試跑實測為準）。
+- 決策規則（預先固定）：OOF Δ ≥ +0.5 個百分點 → 候選，產生 fold 0／1／2 集成 CSV 交使用者上傳 Kaggle；Δ < +0.5 → 停止此方向，備選（label smoothing、R-Drop）預期效果小，屆時與使用者討論是否執行退路。
+- 合規：講義 p.14 要求只用提供資料切出的 train／validation 訓練與驗證，本設計只用訓練子集文字，符合此條。講義 p.9 規定「ONLY use google-bert/bert-base-uncased as your base model」，全講義未提及預訓練／續訓／MLM，也未定義 base model 的範圍；主會話判讀「起點為指定模型、續訓屬自建訓練管線（p.9 #2）」應屬合規，但這是推測、非講義明文。使用者於 2026-11-17 知悉此不確定性，判斷風險可接受並決定執行（使用者決定，非講義確認）。若之後助教回覆不允許，此方向產物不得用於交件。
+- 交件影響：若成功，交件需附 MLM 續訓程式、紀錄與曲線，確保從官方 checkpoint 起可完整重現。
+- 交件規則（使用者 2026-11-17 指示）：若最終分數最高的是 MLM 續訓版本，交件時：
+  1. 附一份文件，主動說明講義 p.9「ONLY use google-bert/bert-base-uncased as your base model」未定義是否涵蓋自行續訓；寫明本做法的流程（從官方 checkpoint 出發、只用訓練子集文字、未用 benchmark）與判讀理由。
+  2. 同時附上第二高分的非 MLM 版本作為保險，含其 checkpoint、推論程式與 CSV，並在 README 明確標示主要版本與保險版本。
+  - 待確認事項（未知，不可假設）：E3 壓縮檔放兩組 checkpoint 的格式與大小限制；Kaggle 最終計分提交可選幾筆。
+
+### 方向 2 預先登記：cv5_sqrt_ep5_mlmall30（2026-11-18 使用者確認，訓練前寫下）
+
+狀態：**已確認**。使用者 2026/11/18 確認本預先登記，設定不變；開工前程式改動須經測試與程式碼審查。
+
+- 背景：使用者說明 Kaggle 無 public／private 之分（leaderboard 分數即成績），目標是最終有一個 Kaggle > 0.92 的模型；方法用盡後可用 Kaggle 在已登錄候選間挑選（屆時另寫上傳次數上限）。因此本實驗以 Kaggle 為主判斷，OOF 只參考。
+- 假設：MLM 續訓看更多文字、更多 epoch，可使 Kaggle 高於 mlm10 的 0.9152。
+- 設定（與 `cv5_sqrt_ep5_mlm10` 的差異）：續訓語料為 `dataset/dataset.csv` 全部 9,000 筆文字（只用文字、不用標籤、不碰 benchmark；mlm10 為每折約 7,200 筆）；續訓 30 epochs（mlm10 為 10）；只續訓 1 次，5 折共用同一 checkpoint（mlm10 每折各自續訓）；續訓無留出文字，只記錄訓練 loss。其餘相同：lr 5e-5、遮罩 15%（80/10/10）、batch 2、累積 8、seed 42、儲存最後 epoch；微調 sqrt-inverse、5 epochs、切分 `outputs/cv5_seed42`。
+- 時間估計：續訓約 3.3 小時（每 epoch 約 6.6 分鐘），微調 5 折約 2.75 小時，合計約 6 小時。
+- 判斷（以 fold 0/1/2 集成 CSV 的 Kaggle 分數）：≥ 0.92 → 主要候選；介於 0.9152 與 0.92 → 沿此線延伸（更長續訓或更高遮罩率）；< 0.9152 → 主版本維持 mlm10。OOF 因續訓看過各折驗證文字而偏高，只作參考、不作判斷。
+- 限制：單次 Kaggle 比較雜訊約 ±1 個百分點（只換 seed 曾差 1.7 個百分點）；一次改兩個因素（語料範圍、epoch 數），無法分辨哪一個有效。
+- 合規：只用課程提供資料的文字；講義 p.9「base model」續訓風險使用者已於 11/17 接受；若此版最高，依交件規則附合規說明文件，並附非 MLM 版本（weighted_quarter 0.9122）作保險。
+- 開工前必要程式改動（需測試與程式碼審查後才可訓練）：(1) `src/mlm.py` 新增使用全部 dataset 文字的語料模式；(2) `check_init_from` 目前會拒絕續訓語料與驗證集重疊，需新增「明確指定才放行」的旗標，並寫入 run_config，避免被誤當嚴格 OOF；(3) `tools/run_cv5_mlm.sh` 或新腳本改為只續訓一次、5 折共用；(4) 確認 `tools/refresh_experiments.py` 相容。
+
+**結果與判定（2026-11-19，[報告](reports/CV5_MLMAll30_Report.md)）**
+- 非嚴格 OOF（續訓看過各折驗證文字，偏樂觀，只作參考）：Macro-F1 90.21%（mlm10 為 89.63%）；對 mlm10 配對比較 Δ +0.58 個百分點，95% 區間 [−0.05, +1.16]，mlmall30 勝 5/5 折，但此比較因洩漏偏向 mlmall30，不作判斷。
+- Kaggle：fold 0/1/2 集成 0.9142（使用者回報，未經平台核驗）。依預先登記規則，< 0.9152 → **主版本維持 `cv5_sqrt_ep5_mlm10`（0.9152）**；mlmall30 不成為主版本，不延伸此線（更長續訓、更高遮罩率不做）。
+- 限制：差距 0.10 個百分點，遠小於單次 Kaggle 比較雜訊約 ±1 個百分點，只能說「全文＋30 epochs 未見改善」，不能說變差；且一次改了語料範圍與 epoch 數兩個因素。
+
+**交接（2026/11/19）**
+- 已完成：方向 2 程式改動（131 測試 OK）、共用 MLM 續訓 30 epochs、5 折微調、OOF、配對比較、集成 CSV 上傳（Kaggle 0.9142）、registry／報告／總表登錄。
+- 未完成：無預先登記的剩餘工作；後續方向未定。
+- 下一個具體動作：與使用者討論後續方向（不自行決定）。
+- 未 commit 的工作：git status 中所有 HW3 改動仍未 commit。
 
 ## 新研究路線（2026/11/16 起，取代原第三、四階段）
+
+> 註：步驟 3 後續（label smoothing／R-Drop）與步驟 4 已由上方「路線調整（2026-11-16，第二次）」取代；步驟 1、2、3a、3b 維持有效。
 
 **動機。** 900 筆驗證集雜訊大：neutral 約 133 筆，幾筆錯判即可改變排名。驗證與 Kaggle 的排序也不一致（已觀察）：weighted_sqrt 驗證 92.65%／Kaggle 0.9049，weighted_quarter 驗證 91.91%／Kaggle 0.9122。因此先讓評估可靠，再找方法。「benchmark 類別比例與訓練不同」目前只是推測，尚無證據。
 
@@ -10,9 +99,41 @@
 |---|---|---|---|
 | 1 logit 偏移校正（不訓練） | 在 weighted_sqrt、weighted_quarter checkpoint 的 FP32 logits 上計算 logits − τ·log π_train（π 為訓練集類別比例）；τ 取預先固定的網格，只用 900 驗證選 τ；τ=0 必須逐位元重現原 CSV；不依 Kaggle 回饋反覆微調。至多產出 3 份有意義的 CSV，由使用者自行提交 | 類別先驗偏移是否為驗證與 Kaggle 不一致的原因之一 | Kaggle 隨 τ 呈一致方向變化，支持類別比例推測，步驟 2 起把 τ 校正納入固定後處理；否則記錄為無效並繼續 |
 | 2 五折交叉驗證（**已完成 2026/11/16**，[報告](reports/CV5_Sqrt_Report.md)：OOF Macro-F1 89.03%，作為步驟 3 基準） | 在 9,000 筆上做分層五折（沿用既有文字群組分層邏輯，避免重複文字跨 fold）。以 OOF 9,000 筆 Macro-F1 及三類 F1 為之後所有比較的主要指標，原 900 驗證降為參考。可取 3 個 fold 模型做等權集成（課程上限 3 個模型）；各模型只在其訓練 fold 訓練、在其驗證 fold 選模，符合訓練／驗證切分規定 | 在較低雜訊的指標下，現行設定的真實水準與波動 | 先以 weighted_sqrt 設定建立 CV 基準，基準建立後才進入步驟 3 |
-| 3 用 CV 重比設定 | 用 CV 重比 sqrt 與 quarter 權重，再逐一試 label smoothing、R-Drop（對標籤雜訊較穩健，為假設）。每次只改一個因素 | 哪些改動在 OOF 上有穩定增益 | 看 OOF Macro-F1 差距與各 fold 是否一致，不只看平均 |
-| 4 進階（有條件） | 用 OOF 預測找疑似錯標樣本並降權；僅用訓練集文字做 MLM 續訓（不得使用 benchmark 文字） | 標籤雜訊與領域適應是否還有空間 | 只有步驟 3 找到穩定增益後才考慮 |
+| 3 用 CV 重比設定（3a、3b 有效；label smoothing／R-Drop 後續**已由第二次調整取代**） | 用 CV 重比 sqrt 與 quarter 權重，再逐一試 label smoothing、R-Drop（對標籤雜訊較穩健，為假設）。每次只改一個因素 | 哪些改動在 OOF 上有穩定增益 | 看 OOF Macro-F1 差距與各 fold 是否一致，不只看平均 |
+| 4 進階（有條件；**已由第二次調整取代**，改列為上方順序 2、3） | 用 OOF 預測找疑似錯標樣本並降權；僅用訓練集文字做 MLM 續訓（不得使用 benchmark 文字） | 標籤雜訊與領域適應是否還有空間 | 只有步驟 3 找到穩定增益後才考慮 |
 | 不做 | 再跑 FGSM（另有 AMP overflow 會中止訓練的已知缺陷，見 `src/training.py` 的 `fgsm_delta`）；在單一 900 驗證集上繼續調參 | — | — |
+
+**步驟 3a：CV 重比 sqrt vs quarter（預先登記，2026/11/16，訓練前寫下；已完成 2026/11/16，[報告](reports/CV5_Quarter_Report.md)）**
+
+- 假設：quarter（較溫和的類別權重）在 OOF 上不劣於、或優於 sqrt。900 驗證上 sqrt 92.65% 對 quarter 91.91% 的差距，已被步驟 2 證明在雜訊範圍內，而 Kaggle 為 quarter 0.9122 > sqrt 0.9049。
+- 對照：`cv5_sqrt`（OOF 89.03%）。唯一變因：class weighting sqrt-inverse → quarter-inverse；其餘設定、5 折切分、seed 42 全同（評估頻率維持每 epoch 一次，與 CV sqrt 相同）。
+- 執行：`bash tools/run_cv5.sh cv5_quarter quarter-inverse`，再以 `python -m tools.compare_oof --a outputs/cv5_sqrt_oof --b outputs/cv5_quarter_oof --output <新 json>` 做配對 bootstrap（seed 20261116、2000 次）。
+- 預算：5 次完整訓練（約 110 分鐘）；任一折 NaN 或 reload 驗證失敗即停止分析；最多因當機重跑 1 次。
+- 決策規則（預先固定）：Δ = OOF(quarter) − OOF(sqrt)。配對 bootstrap 95% 區間下界 > 0 → quarter 為後續基準；上界 < 0 → sqrt 為後續基準；否則視為無顯著差異，後續基準取 OOF 較高者並標註「差異不顯著」。Kaggle 分數不用於此決策。
+- 預期決策資訊：決定步驟 3 後續單因素實驗（label smoothing、R-Drop、epoch 數）的基準設定。
+- **決策結果（2026/11/16）**：Δ（quarter − sqrt）= −0.23 個百分點（OOF 88.80% vs 89.03%），配對 bootstrap 95% 區間 [−0.71, +0.21] 含 0，依規則視為**無顯著差異**；後續基準維持 **sqrt**（OOF 較高者），標註「差異不顯著」。逐 fold quarter 勝 2/5。
+
+**步驟 3b：訓練長度 3 → 5 epochs（預先登記，2026/11/16，訓練前寫下）**
+
+- 假設：現行 3 epochs 訓練不足；5 epochs 的 OOF Macro-F1 高於 3 epochs。依據：步驟 2／3a 共 10 折中 8 折最佳 epoch 為最後一個。
+- 對照：`cv5_sqrt`（3 epochs，OOF 89.03%）；唯一變因：`--epochs 3 → 5`。附註：此因素本身連帶改變學習率排程長度（warmup 步數與線性衰減跨度隨總步數變長），屬「訓練長度」因素的一部分，不另拆；其餘設定、5 折切分、seed 42、class weighting sqrt-inverse、eval-interval 1.0 全同。
+- 指令：`bash tools/run_cv5.sh cv5_sqrt_ep5 sqrt-inverse 5`；比較 `python -m tools.compare_oof --a outputs/cv5_sqrt_oof --b outputs/cv5_sqrt_ep5_oof --output outputs/cv5_compare_sqrt_vs_sqrt_ep5.json`。
+- 預算：5 次完整訓練，每次約 1.7 倍時間（合計約 3 小時，依先前每折 16–33 分鐘推估）；任一折 NaN／reload 驗證失敗即停止分析；最多因當機重跑 1 次。
+- 決策規則（同 3a，預先固定）：Δ = OOF(ep5) − OOF(ep3)；配對 bootstrap 95% 區間下界 > 0 → ep5 為後續基準；上界 < 0 → 維持 ep3；否則視為不顯著，基準取 OOF 較高者並標註。Kaggle 分數不用於決策。
+- 附加觀察（不作決策依據）：各折最佳 epoch 分布；若 ep5 多數折最佳 epoch 仍為 5，記為「可能仍訓練不足」；若多落在 3–4，記為訓練長度已足。
+- 已知限制：最佳 epoch 從 5 個候選中挑，OOF 的選模樂觀偏誤大於 3 個候選，比較略偏向 ep5，報告需註明。
+- **決策結果（2026/11/16，[報告](reports/CV5_Sqrt_Ep5_Report.md)）**：Δ（ep5 − ep3）= +0.19 個百分點（OOF 89.22% vs 89.03%），配對 bootstrap 95% 區間 [−0.38, +0.76] 含 0，依規則視為**無顯著差異**；後續基準改為 **cv5_sqrt_ep5**（OOF 較高者），標註「差異不顯著」。逐 fold ep5 勝 3/5；最佳 epoch 分布 2、3、5、5、5（依登記記為「可能仍訓練不足」，但第 3 → 5 epoch 增幅小、曲線大致平坦，訓練長度可能不是主要瓶頸，屬推測）。+0.19 小於且同向於選模偏誤，保守解讀為訓練長度 3 → 5 無可偵測效果。
+
+**步驟 3c：label smoothing ε = 0.1（預先登記，2026/11/16，訓練前寫下；已由第二次調整取代，`cv5_sqrt_ep5_ls01` 於 fold 0 中止、未產生結果，不執行下列決策規則）**
+
+- 假設：訓練資料可能有標籤雜訊（neutral ↔ negative 混淆最多），label smoothing 降低模型對錯標樣本的過度自信，提升 OOF Macro-F1，尤其 neutral F1。
+- 對照：`cv5_sqrt_ep5`（OOF 89.22%）；唯一變因：`--label-smoothing 0 → 0.1`（ε 預先固定為常用值 0.1，不做網格搜尋）；其餘設定（sqrt-inverse、5 epochs、eval-interval 1.0）、相同 5 折、seed 42 全同。
+- 與類別權重的組合方式：每筆樣本 loss_i = w[y_i] × CE_ε(logits_i, y_i)，CE_ε 為未加權的 `F.cross_entropy(..., label_smoothing=ε)`（即 (1−ε)·NLL(y_i) + ε·mean_j NLL(j)）；權重只依真實類別套用，之後沿用「加權和／實際視窗樣本數」正規化與梯度累積。刻意不使用 PyTorch 的 `weight=` 與 `label_smoothing=` 組合（該組合會把平滑項依各目標類別加權）。只影響訓練 loss；評估 loss 仍為未加權、未平滑 CE，Macro-F1 與選模邏輯不變。ε = 0 時與既有實作逐位元相同。
+- 指令：`bash tools/run_cv5.sh cv5_sqrt_ep5_ls01 sqrt-inverse 5 --label-smoothing 0.1`；比較 `python -m tools.compare_oof --a outputs/cv5_sqrt_ep5_oof --b outputs/cv5_sqrt_ep5_ls01_oof --output outputs/cv5_compare_ep5_vs_ep5_ls01.json`。
+- 預算：5 次完整訓練（約 2.5 小時）；任一折 NaN／reload 驗證失敗即停止分析；最多因當機重跑 1 次。
+- 決策規則（同 3a／3b，預先固定）：Δ = OOF(ls0.1) − OOF(ep5)；配對 bootstrap 95% 區間下界 > 0 → ls0.1 成為後續基準；上界 < 0 → 維持 cv5_sqrt_ep5；否則視為不顯著，基準取 OOF 較高者並標註。Kaggle 分數不用於決策。
+- 附加觀察（不作決策依據）：neutral F1 的 Δ；各折最佳 epoch 分布。label smoothing 會改變訓練／驗證 loss 的數值與機率校準，但選模依 Macro-F1，不受影響。
+- 已知限制：單 seed、只測單一 ε 值；此比較約只能偵測 ≥0.5 個百分點的效果。
 
 **彈性調整規則。** 每步結束先檢視結果再決定下一步；可依證據調換順序、跳過、合併或新增步驟。不設時程；訓練次數上限為每個 CV 比較組 5 次、每次只改一個因素（見調整紀錄）。仍遵守課程規則：只用提供資料、只用 bert-base-uncased、集成最多 3 個模型、不用 benchmark 標籤或文字訓練。每次調整都要寫進下方調整紀錄。
 
@@ -23,6 +144,26 @@
 | 2026/11/16 | 建立新研究路線，取代原第三、四階段 | 驗證雜訊大且與 Kaggle 排序不一致 |
 | 2026/11/16 | 步驟 1 完成（[報告](reports/Logit_Adjust_Report.md)）：類別先驗推測證據弱，下一步進入步驟 2；τ 校正暫不納入固定後處理 | benchmark 預測比例約 73／13／14%，接近訓練比例；weighted_sqrt 最佳 τ=0；weighted_quarter τ=+0.4 驗證 +0.50 個百分點（約 4 筆，在雜訊內），benchmark 只改 3 筆。sqrt 與 quarter 的 11 筆差異多數不是先驗偏移造成。若使用者回報 τ=+0.4 的 Kaggle 分數有明顯變化再重新評估 |
 | 2026/11/16 | 步驟 2 完成（[報告](reports/CV5_Sqrt_Report.md)）。(a) 訓練次數上限調整：原「核心上限 9 次完整訓練」已用 5 次，本步再用 5 次（合計 10 次）；該上限屬已被新研究路線取代的舊計畫，且使用者指示開始步驟 2，故調整。之後步驟 3 的新上限為「每個 CV 比較組 5 次訓練，每次只改一個因素」。(b) OOF 成為主要指標，原 900 驗證降為參考 | 單一 900 驗證雜訊大；OOF 9,000 筆 Macro-F1 89.03%、fold 標準差約 1.98 個百分點，原 900 筆在 OOF 中為 91.28%（較整體容易）。步驟 3 以相同 5 折、相同設定只改 class weighting 為 quarter-inverse |
+| 2026/11/16 | 步驟 3 開始：先做步驟 3a（sqrt vs quarter 的 CV 重比，預先登記見上）。評估頻率刻意維持 eval-interval 1.0 | 與 `cv5_sqrt` 保持單一變因；原單模型 weighted_quarter 用 0.5，這裡不跟，否則 class weighting 與評估頻率兩個因素混在一起 |
+| 2026/11/16 | 步驟 3a 完成（[報告](reports/CV5_Quarter_Report.md)）：sqrt 與 quarter 在 OOF 上無顯著差異，後續基準維持 sqrt（差異不顯著）。步驟 3 的下一個單因素實驗尚未決定 | Δ −0.23 個百分點、95% 區間 [−0.71, +0.21]，逐 fold 2/5 勝；兩邊 10 個 fold 中 8 個最佳 epoch 為最後一個（訓練不足為推測） |
+| 2026/11/16 | 步驟 3b 開始：使用者同意把訓練長度實驗（sqrt 基準上 epochs 3 → 5）提前於 label smoothing／R-Drop（預先登記見上）。label smoothing／R-Drop 延後 | 步驟 2／3a 共 10 折中 8 折最佳 epoch 為最後一個（第 3 個），曲線多仍上升，訓練不足是最有證據的下一個因素 |
+| 2026/11/16 | 步驟 3b 完成（[報告](reports/CV5_Sqrt_Ep5_Report.md)）：ep5 與 ep3 在 OOF 上無顯著差異，後續基準改為 cv5_sqrt_ep5（OOF 較高者，差異不顯著）。下一個單因素實驗尚未決定 | Δ +0.19 個百分點、95% 區間 [−0.38, +0.76]，逐 fold 3/5 勝；步驟 3a 與 3b 的差距都在約 ±0.5 個百分點內，單 seed CV 只能偵測約 0.5 個百分點以上的效果 |
+| 2026/11/16 | 步驟 3c 開始：新增 label smoothing（ε = 0.1）單因素實驗，基準為 cv5_sqrt_ep5（預先登記見上）；新增 `--label-smoothing` 參數與 `run_cv5.sh` 額外參數轉傳 | 使用者選定下一個單因素實驗；步驟 3a／3b 差距都在約 ±0.5 個百分點內，訓練長度與類別權重已無明顯可調空間，改測標籤雜訊假設 |
+| 2026/11/16（第二次） | 第二次路線調整（見文件開頭「路線調整（2026-11-16，第二次）」）：取代步驟 3 後續（label smoothing／R-Drop）與步驟 4；改採停損規則（只排預期 ≥0.5 個百分點的方向、每方向至多 1 組 CV、OOF Δ < +0.5 個百分點即停），順序為 0 上傳 cv5_sqrt_ep5 集成 CSV、1 多 seed 43、2 錯標降權、3 MLM 續訓、4 備選；全部未達門檻則交件採 weighted_quarter（0.9122）並補封裝演練。使用者於當日同意 | 近期單因素實驗預期效果約 0.1–0.3 個百分點，低於單 seed 五折 CV 約 0.5 個百分點的偵測力；CV 線（OOF 89.22%）從未回 Kaggle 驗證，OOF 與 Kaggle 對應未知；原計畫無停損規則與退路 |
+| 2026/11/16（第二次） | `cv5_sqrt_ep5_ls01`（label smoothing 0.1、sqrt-inverse、5 epochs）於 fold 0 訓練中途經使用者同意中止，未產生 checkpoint 或指標；`outputs/cv5_sqrt_ep5_ls01/` 與 `outputs/cv5_sqrt_ep5_ls01_train.log` 保留未刪；`saved_models/cv5_sqrt_ep5_ls01/fold0/` 為空資料夾，同樣保留未刪，不列入任何比較，也不計入 registry 的 runs | 配合第二次路線調整，label smoothing 降為備選 |
+| 2026/11/16（第二次） | 順序 2 錯標抽查完成（[報告](reports/Label_Noise_Audit_Report.md)）：依預先登記規則通過（C 組一致率 100% ≥ 80%；A+B annotation ≠ label 36/60 = 60% ≥ 50%；\|H\| = 473 ≥ 90）。不訓練的後處理分析，不寫進 registry runs | 抽樣 60 筆小樣本；只計盲標 high confidence 約 32%；A 組 14/40 為盲標亦認為 neutral 的單純詢問，推測模型對 neutral 問句有系統性負面偏誤 |
+| 2026/11/16（第二次） | `cv5_sqrt_ep5_drop90` 預先登記（見「順序 2 預先登記」，訓練前寫下）：使用者選擇排除版本（w=0），排除 473 筆高信心不一致樣本，唯一變因為訓練子集排除 | 抽查通過；排除比降權更單純；決策門檻 OOF Δ ≥ +0.5 個百分點 |
+| 2026/11/16（第二次） | 追加檢查完成（neutral 問句的高信心誤判，[報告](reports/Label_Noise_Audit_Report.md)）：模型對問句的 neutral recall 反而較高，負面偏誤推測不成立；drop90 風險較原估計低，預先登記不變。同時修正抽查計分腳本 ambiguous 欄定義（其餘數字不變） | 不訓練的後處理分析；產物 `outputs/question_bias_check_20261116/` |
+| 2026/11/17（第二次） | `cv5_sqrt_ep5_drop90` 完成（[報告](reports/CV5_Drop90_Report.md)）：OOF 89.34% vs 對照 89.22%，Δ +0.12 個百分點（95% [−0.49, +0.76]，fold 勝 3/5），未達預先登記門檻 +0.5 → 停止錯標排除方向、不提交 Kaggle；下一步順序 3（MLM 續訓）待設計。已登錄 registry `cross_validations` | 排除後 neutral recall 79.3% → 77.3%，推測排除也移除部分標籤正確的 neutral 樣本；單 seed CV 只能偵測約 0.5 個百分點以上的效果 |
+| 2026/11/17（第二次） | `cv5_sqrt_ep5_mlm10` 預先登記（見「順序 3 預先登記」，訓練前寫下）：每折僅用該折訓練子集文字做 MLM 續訓 10 epochs 後再微調，唯一變因為微調初始權重。使用者於當日知悉講義 p.9 對「base model」未明確界定預訓練／續訓、合規為主會話推測而非講義明文，判斷風險可接受並決定執行（使用者決定，非講義確認）；若之後助教回覆不允許，此方向產物不得用於交件 | 任務適應預訓練（TAPT）預期 +0.3～1 個百分點（推測）；決策門檻 OOF Δ ≥ +0.5 個百分點 |
+| 2026/11/17（第二次） | 新增 MLM 版本交件規則（使用者指示，寫入「順序 3 預先登記」交件影響）：若最高分為 MLM 續訓版本，交件附合規說明文件，並附第二高分非 MLM 版本（checkpoint、推論程式、CSV）作保險，README 標示主要／保險版本；E3 壓縮檔格式與大小限制、Kaggle 最終提交可選筆數待確認 | 僅文件規則，不涉訓練；降低助教不接受 MLM 續訓的風險 |
+| 2026/11/17（第二次） | 備選清單新增 pooler penalized tanh（使用者提議，源自課堂介紹），排在 MLM 續訓之後、與 LS／R-Drop 同層；未預先登記、未實作 | 只動分類前最後一段，分類頭激活通常不是瓶頸，預期效果小（推測）；實作成本低 |
+| 2026/11/17（第二次） | `cv5_sqrt_ep5_mlm10` fold 4 MLM 續訓於第 4 epoch 崩潰（`AssertionError: No inf checks were recorded for this optimizer`）：fold 4 訓練集 7,201 筆（奇數），batch 2 → 最後一個梯度累積窗口只有 1 筆，該筆抽到零遮罩，無 backward 卻呼叫 `scaler.step`。修正 `src/mlm.py`（整個窗口無 backward 時跳過 optimizer／scheduler 更新並記錄 `empty_windows`），新增 2 個回歸測試（共 118 OK）；只重跑 fold 4，崩潰產物保留於 `outputs/cv5_sqrt_ep5_mlm10_mlm_fold4_crashed_20261117/` | fold 0–3 每窗口皆完整 8 個 batch、從未進入該路徑，修正不影響其行為，故不重跑；fold 4 的 `training_code_sha256` 與 fold 0–3 不同，summary 的 `empty_windows` = 1（見[報告](reports/CV5_MLM10_Report.md)） |
+| 2026/11/17（第二次） | `cv5_sqrt_ep5_mlm10` 完成（[報告](reports/CV5_MLM10_Report.md)）：OOF 89.63% vs 對照 89.22%，Δ +0.41 個百分點（95% [−0.21, +1.06]，fold 勝 3/5），未達預先登記門檻 +0.5 → 不列候選、不提交 Kaggle，為目前 OOF 最高的 CV 組；後續（備選或退路）待與使用者討論。已登錄 registry `cross_validations` | Δ 方向為正但區間跨 0，單 seed CV 偵測力約 0.5 個百分點，無法區分真增益與雜訊 |
+| 2026/11/17（第二次） | 使用者上傳 mlm10 集成 CSV，Kaggle 0.9152，高於 weighted_quarter 0.9122，成為目前最高；依使用者交件規則（見「順序 3 預先登記」交件影響），MLM 版本為主要候選，須附合規說明文件，並以 weighted_quarter（0.9122）為保險版本 | 偏離預先登記（OOF 未達門檻仍提交）由使用者決定；Kaggle 與 OOF 差距受 benchmark 雜訊影響（seed 變異約 1.7 個百分點） |
+| 2026/11/17（第二次） | 使用者說明 Kaggle 無 public／private 之分、目標為最終一個 > 0.92 的模型，方法用盡後可用 Kaggle 在已登錄候選間挑選；使用者選擇方向 2（cv5_sqrt_ep5_mlmall30，見「方向 2 預先登記草稿」），指示先不開工 | mlm10 是唯一在 OOF 與 Kaggle 皆為正的方向；以 Kaggle 為最終判斷後，嚴格 OOF 比較的價值下降，方向 2 只需續訓一次、總時間約 6 小時（方向 1 每折各自續訓 30 epochs 約 15 小時） |
+| 2026/11/18（第二次） | 方向 2 `cv5_sqrt_ep5_mlmall30` 預先登記經使用者確認（設定、判斷規則不變，見「方向 2 預先登記」）；開工前新增：`pretrain-mlm --mlm-corpus all-dataset`、`train --allow-mlm-val-overlap`（寫入 run_config 標示非嚴格 OOF）、`tools/run_cv5_mlm_shared.sh`（續訓一次、5 折共用） | 使用者確認；以 Kaggle fold 0/1/2 集成分數判斷，OOF 只參考 |
+| 2026/11/19（第二次） | 方向 2 `cv5_sqrt_ep5_mlmall30` 完成（[報告](reports/CV5_MLMAll30_Report.md)）：非嚴格 OOF 90.21%（偏樂觀，只參考），Kaggle 0.9142（使用者回報）< 0.9152 → 依預先登記判斷主版本維持 mlm10，不延伸此線；一次改兩個因素且差距遠小於 Kaggle 雜訊，只能說未見改善；下一步待與使用者討論 | 預先登記規則：< 0.9152 主版本維持 mlm10 |
 
 ## 現況與保留版本
 

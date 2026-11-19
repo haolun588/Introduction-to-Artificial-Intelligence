@@ -65,6 +65,41 @@
 - 三類 F1：negative 96.01%／neutral 80.78%／positive 90.29%。
 - 集成 CSV：`outputs/cv5_sqrt_oof/submissions/cv5_folds012_mean.csv`（fold 0、1、2 等權；SHA-256 前 12 碼 `7037e623cf00`）；提交狀態 `not_submitted`，Kaggle 待回報。
 
+## 交叉驗證（OOF；不列入上方單模型比較）
+
+- [五折 CV weighted_quarter](../docs/reports/CV5_Quarter_Report.md)：5 折、9,000 筆 OOF；OOF Macro-F1 **88.80%**，fold 平均 88.78% ± 1.70 個百分點（樣本標準差）。
+- 三類 F1：negative 96.00%／neutral 80.15%／positive 90.23%。
+- 集成 CSV：`outputs/cv5_quarter_oof/submissions/cv5_folds012_mean.csv`（fold 0、1、2 等權；SHA-256 前 12 碼 `a122c68fcaa8`）；提交狀態 `not_submitted`，Kaggle 待回報。
+- 配對比較（`cv5_quarter` − `cv5_sqrt`，[結果](../outputs/cv5_compare_sqrt_vs_quarter.json)）：Δ OOF Macro-F1 -0.23 個百分點，配對 bootstrap 95% 區間 [-0.71, +0.21]（2,000 次，seed 20261116），Δ≤0 比例 84.4%；cv5_quarter 勝 2/5 折。
+
+## 交叉驗證（OOF；不列入上方單模型比較）
+
+- [五折 CV weighted_sqrt 5 epochs](../docs/reports/CV5_Sqrt_Ep5_Report.md)：5 折、9,000 筆 OOF；OOF Macro-F1 **89.22%**，fold 平均 89.22% ± 1.51 個百分點（樣本標準差）。
+- 三類 F1：negative 96.02%／neutral 80.75%／positive 90.90%。
+- 集成 CSV：`outputs/cv5_sqrt_ep5_oof/submissions/cv5_folds012_mean.csv`（fold 0、1、2 等權；SHA-256 前 12 碼 `351963b9048f`）；提交狀態 `user_reported`，Kaggle 0.8971。
+- 配對比較（`cv5_sqrt_ep5` − `cv5_sqrt`，[結果](../outputs/cv5_compare_sqrt_vs_sqrt_ep5.json)）：Δ OOF Macro-F1 +0.19 個百分點，配對 bootstrap 95% 區間 [-0.38, +0.76]（2,000 次，seed 20261116），Δ≤0 比例 26.9%；cv5_sqrt_ep5 勝 3/5 折。
+
+## 交叉驗證（OOF；不列入上方單模型比較）
+
+- [五折 CV weighted_sqrt 5 epochs 排除 473 筆高信心不一致樣本](../docs/reports/CV5_Drop90_Report.md)：5 折、9,000 筆 OOF；OOF Macro-F1 **89.34%**，fold 平均 89.34% ± 1.66 個百分點（樣本標準差）。
+- 三類 F1：negative 96.08%／neutral 81.10%／positive 90.85%。
+- 集成 CSV：`outputs/cv5_sqrt_ep5_drop90_oof/submissions/cv5_folds012_mean.csv`（fold 0、1、2 等權；SHA-256 前 12 碼 `a112b5c89e62`）；提交狀態 `not_submitted`，Kaggle 待回報。
+- 配對比較（`cv5_sqrt_ep5_drop90` − `cv5_sqrt_ep5`，[結果](../outputs/cv5_compare_ep5_vs_drop90.json)）：Δ OOF Macro-F1 +0.12 個百分點，配對 bootstrap 95% 區間 [-0.49, +0.76]（2,000 次，seed 20261116），Δ≤0 比例 35.1%；cv5_sqrt_ep5_drop90 勝 3/5 折。
+
+## 交叉驗證（OOF；不列入上方單模型比較）
+
+- [五折 CV weighted_sqrt 5 epochs 微調自各折 MLM 續訓 10 epochs 權重（僅用該折訓練子集文字）](../docs/reports/CV5_MLM10_Report.md)：5 折、9,000 筆 OOF；OOF Macro-F1 **89.63%**，fold 平均 89.64% ± 1.58 個百分點（樣本標準差）。
+- 三類 F1：negative 96.15%／neutral 81.66%／positive 91.09%。
+- 集成 CSV：`outputs/cv5_sqrt_ep5_mlm10_oof/submissions/cv5_folds012_mean.csv`（fold 0、1、2 等權；SHA-256 前 12 碼 `ad1124f0a7cc`）；提交狀態 `user_reported`，Kaggle 0.9152。
+- 配對比較（`cv5_sqrt_ep5_mlm10` − `cv5_sqrt_ep5`，[結果](../outputs/cv5_compare_ep5_vs_mlm10.json)）：Δ OOF Macro-F1 +0.41 個百分點，配對 bootstrap 95% 區間 [-0.21, +1.06]（2,000 次，seed 20261116），Δ≤0 比例 10.3%；cv5_sqrt_ep5_mlm10 勝 3/5 折。
+
+## 交叉驗證（OOF；不列入上方單模型比較）
+
+- [五折 CV weighted_sqrt 5 epochs 微調自共用 MLM 續訓 30 epochs 權重（續訓語料為全部 9,000 筆文字，非嚴格 OOF）](../docs/reports/CV5_MLMAll30_Report.md)：5 折、9,000 筆 OOF；OOF Macro-F1 **90.21%**，fold 平均 90.21% ± 1.38 個百分點（樣本標準差）。
+- 三類 F1：negative 96.43%／neutral 82.78%／positive 91.44%。
+- 集成 CSV：`outputs/cv5_sqrt_ep5_mlmall30_oof/submissions/cv5_folds012_mean.csv`（fold 0、1、2 等權；SHA-256 前 12 碼 `80f97a038780`）；提交狀態 `user_reported`，Kaggle 0.9142。
+- 配對比較（`cv5_sqrt_ep5_mlmall30` − `cv5_sqrt_ep5_mlm10`，[結果](../outputs/cv5_compare_mlm10_vs_mlmall30.json)）：Δ OOF Macro-F1 +0.58 個百分點，配對 bootstrap 95% 區間 [-0.05, +1.16]（2,000 次，seed 20261116），Δ≤0 比例 3.9%；cv5_sqrt_ep5_mlmall30 勝 5/5 折。
+
 ## 比較與交件狀態
 
 - 共用固定切分：8,100 train／900 validation。

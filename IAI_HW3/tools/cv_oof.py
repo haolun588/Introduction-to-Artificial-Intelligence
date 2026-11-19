@@ -16,7 +16,7 @@ from pathlib import Path
 
 import numpy as np
 
-from src.training import ROOT, LABELS, load_split, metrics, read_rows, write_json
+from src.training import ROOT, LABELS, expected_train_ids, load_split, metrics, read_rows, write_json
 
 BATCH_SIZE = 2  # same as the FP32 precision audit
 MAX_ENSEMBLE = 3
@@ -24,8 +24,9 @@ DEFAULT_ENSEMBLE_FOLDS = (0, 1, 2)  # fixed in advance, not chosen by score
 
 
 def check_fold_split(config, fold_manifest):
-    """The checkpoint must have been trained on exactly this fold's train/validation ids."""
-    if (config.get("train_ids") != fold_manifest["train_ids"]
+    """The checkpoint must have been trained on exactly this fold's train/validation ids
+    (minus the train ids it recorded as excluded, if any)."""
+    if (config.get("train_ids") != expected_train_ids(fold_manifest["train_ids"], config)
             or config.get("validation_ids") != fold_manifest["validation_ids"]):
         raise ValueError("Checkpoint split differs from the fold JSON")
 

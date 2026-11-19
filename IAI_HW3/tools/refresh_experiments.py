@@ -101,8 +101,20 @@ def collect_cross_validations(registry, dataset_hash, benchmark_ids):
                     f"Invalid labels or smoke checkpoint: {checkpoint}")
             require(config["dataset_sha256"] == dataset_hash and config["split_sha256"] == split_hash,
                     f"Dataset/split mismatch: {checkpoint}")
-            require(config["train_ids"] == train_ids and config["validation_ids"] == val_ids,
+            excluded = (config.get("exclude_train_ids") or {}).get("removed_train_ids", [])
+            require(set(excluded) <= set(train_ids) and len(set(excluded)) == len(excluded)
+                    and config["train_ids"] == [i for i in train_ids if i not in set(excluded)]
+                    and config["validation_ids"] == val_ids,
                     f"Split IDs differ from fold file: {checkpoint}")
+            init_from = config.get("init_from")
+            if init_from:  # runs fine-tuned from an MLM checkpoint: the checkpoint must still exist unchanged
+                mlm_dir = Path(init_from["path"])
+                mlm_rel = mlm_dir.relative_to(ROOT).as_posix() if mlm_dir.is_absolute() else mlm_dir.as_posix()
+                require(local_path(f"{mlm_rel}/mlm_summary.json").is_file()
+                        and local_path(f"{mlm_rel}/model.safetensors").is_file(),
+                        f"Missing MLM init checkpoint files: {mlm_rel}")
+                require(digest(f"{mlm_rel}/model.safetensors") == init_from["model_sha256"],
+                        f"MLM init checkpoint hash differs: {mlm_rel}")
             check_metrics(config["validation"], len(val_ids))
             model = read_json(f"{checkpoint}/config.json")
             require(model["id2label"] == {str(i): label for i, label in enumerate(LABELS)},
@@ -147,6 +159,30 @@ def collect_cross_validations(registry, dataset_hash, benchmark_ids):
                         "ensemble_folds": oof["ensemble"]["folds"], "submission_rows": len(sub_rows),
                         "source_sha256": {metrics_path: digest(metrics_path), predictions_path: digest(predictions_path),
                                           manifest_path: digest(manifest_path)}})
+    by_id = {result["id"]: result for result in results}
+    for result in results:
+        comparison = result.get("comparison")
+        if comparison is None:
+            continue
+        name = result["id"]
+        require(comparison["b"] == name and comparison["a"] in by_id and comparison["a"] != name,
+                f"Invalid CV comparison references: {name}")
+        a, b = by_id[comparison["a"]], result
+        report = read_json(comparison["path"])
+        require(report["dataset_sha256"] == dataset_hash and report["k"] == len(b["folds"]) == len(a["folds"])
+                and report["rows"] == len(all_ids), f"CV comparison provenance differs: {name}")
+        for side, cv in (("A", a), ("B", b)):
+            require(math.isclose(report[side]["oof_macro_f1"], cv["oof"]["macro_f1"], abs_tol=1e-9),
+                    f"CV comparison {side} OOF Macro-F1 differs from registry CV: {name}")
+        require(math.isclose(report["delta_oof_macro_f1"], b["oof"]["macro_f1"] - a["oof"]["macro_f1"], abs_tol=1e-9),
+                f"CV comparison delta inconsistent: {name}")
+        boot = report["paired_bootstrap"]
+        require(boot["delta_p2_5"] <= boot["delta_p97_5"], f"CV comparison interval invalid: {name}")
+        comparison.update(sha256=digest(comparison["path"]), delta=report["delta_oof_macro_f1"],
+                          delta_class_f1=report["delta_class_f1"], ci_low=boot["delta_p2_5"],
+                          ci_high=boot["delta_p97_5"], fraction_delta_le_0=boot["fraction_delta_le_0"],
+                          resamples=boot["resamples"], bootstrap_seed=boot["seed"],
+                          b_wins_folds=report["per_fold"]["b_wins"], disagreement=report["disagreement"])
     return results
 
 
@@ -387,7 +423,7 @@ def collect():
         calibrations.append({**entry, "results": result, "evidence_sha256": evidence})
     cross_validations = collect_cross_validations(registry, dataset_hash, benchmark_ids)
     code = ["main.py", "src/__init__.py", "src/training.py", "src/eda.py", "src/preprocessing.py",
-            "src/model_source.py", "tools/__init__.py", "tools/analyze_ensemble.py", "tools/audit_emoji.py",
+            "src/model_source.py", "src/mlm.py", "tools/__init__.py", "tools/analyze_ensemble.py", "tools/audit_emoji.py",
             "tools/audit_precision.py", "tools/cv_oof.py", "tools/refresh_experiments.py", "tools/calibrate_fgsm.py",
             "tools/package_candidate.py", "tools/verify_package.py",
             "requirements.txt", "requirements/train.txt", "requirements/eda.txt", "requirements/lock.txt"]
@@ -449,6 +485,11 @@ def render(snapshot):
                   "- 三類 F1：" + "／".join(f"{label} {classes[label]['f1']:.2%}" for label in LABELS) + "。",
                   f"- 集成 CSV：`{cv['submission']['path']}`（fold {'、'.join(map(str, cv['ensemble_folds']))} 等權；"
                   f"SHA-256 前 12 碼 `{cv['submission']['sha256'][:12]}`）；提交狀態 `{cv['submission']['submission_status']}`，Kaggle {score}。"]
+        if cv.get("comparison"):
+            c = cv["comparison"]
+            lines.append(f"- 配對比較（`{c['b']}` − `{c['a']}`，[結果](../{c['path']})）：Δ OOF Macro-F1 {c['delta'] * 100:+.2f} 個百分點，"
+                         f"配對 bootstrap 95% 區間 [{c['ci_low'] * 100:+.2f}, {c['ci_high'] * 100:+.2f}]（{c['resamples']:,} 次，seed {c['bootstrap_seed']}），"
+                         f"Δ≤0 比例 {c['fraction_delta_le_0']:.1%}；{c['b']} 勝 {c['b_wins_folds']}/{len(cv['folds'])} 折。")
     lines += ["", "## 比較與交件狀態", "",
               f"- 共用固定切分：{snapshot['train_rows']:,} train／{snapshot['validation_rows']:,} validation。",
               f"- 驗證參考：`{snapshot['roles']['validation_reference']}`；Kaggle 候選：`{snapshot['roles']['kaggle_candidate']}`。",

@@ -65,6 +65,43 @@ def load_split(data_dir, split_path):
     return train, val, manifest
 
 
+def read_id_list(path):
+    """One id per line (UTF-8, blank lines ignored); duplicates are rejected."""
+    ids = [line.strip() for line in Path(path).read_text(encoding="utf-8-sig").splitlines() if line.strip()]
+    if len(set(ids)) != len(ids):
+        raise ValueError("Duplicate IDs in the train-exclusion list")
+    return ids
+
+
+def exclude_train_rows(train_rows, val_rows, path):
+    """Drop listed ids from the training rows only. Returns (filtered_train, record)."""
+    path = Path(path)
+    ids = read_id_list(path)
+    known = {r["id"] for r in train_rows} | {r["id"] for r in val_rows}
+    unknown = [i for i in ids if i not in known]
+    if unknown:
+        raise ValueError(f"Train-exclusion list has {len(unknown)} IDs not in the dataset (e.g. {unknown[0]})")
+    listed = set(ids)
+    kept = [r for r in train_rows if r["id"] not in listed]
+    removed = [r["id"] for r in train_rows if r["id"] in listed]
+    record = {"path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "listed": len(ids),
+              "removed_from_train": len(removed), "in_validation_kept": len(ids) - len(removed),
+              "removed_train_ids": removed}
+    return kept, record
+
+
+def expected_train_ids(fold_train_ids, config):
+    """Fold train ids minus the ids the run recorded as excluded; the record must be self-consistent."""
+    record = config.get("exclude_train_ids")
+    if not record:
+        return list(fold_train_ids)
+    removed = record["removed_train_ids"]
+    if (len(set(removed)) != len(removed) or not set(removed) <= set(fold_train_ids)
+            or record["removed_from_train"] != len(removed)):
+        raise ValueError("Recorded excluded train ids are inconsistent with the fold train ids")
+    return [i for i in fold_train_ids if i not in set(removed)]
+
+
 def smoke_subset(rows, seed, per_class=16):
     rng = random.Random(seed)
     selected = []
@@ -166,10 +203,17 @@ def class_weights(rows, method):
     return weights.float()
 
 
-def training_loss(logits, labels, weights, window_samples):
+def training_loss(logits, labels, weights, window_samples, label_smoothing=0.0):
     # Fixed sample normalization preserves class weighting even for micro-batch 1.
     # Do not average separately by each micro-batch's sum of class weights.
-    return F.cross_entropy(logits.float(), labels, weight=weights, reduction="sum") / window_samples
+    if label_smoothing == 0:
+        return F.cross_entropy(logits.float(), labels, weight=weights, reduction="sum") / window_samples
+    # Smoothing is applied per sample first, then scaled by the true-class weight
+    # (F.cross_entropy(weight=, label_smoothing=) would weight the smoothing term by target class).
+    per_sample = F.cross_entropy(logits.float(), labels, reduction="none", label_smoothing=label_smoothing)
+    if weights is not None:
+        per_sample = per_sample * weights[labels]
+    return per_sample.sum() / window_samples
 
 
 def fgsm_delta(gradient, input_ids, attention_mask, special_ids, epsilon):
@@ -185,7 +229,7 @@ def fgsm_delta(gradient, input_ids, attention_mask, special_ids, epsilon):
 
 
 def fgsm_backward(model, batch, labels, weights, window_samples, scaler,
-                  epsilon, special_ids, amp=False, diagnostics=False):
+                  epsilon, special_ids, amp=False, diagnostics=False, label_smoothing=0.0):
     """Accumulate 0.5 clean + 0.5 adversarial gradients, with detached attack.
 
     autograd.grad does not populate parameter .grad; unscale its returned input
@@ -197,7 +241,7 @@ def fgsm_backward(model, batch, labels, weights, window_samples, scaler,
     embeddings = model.get_input_embeddings()(batch["input_ids"])
     with torch.autocast(device_type=device_type, dtype=torch.float16, enabled=amp):
         clean_logits = model(inputs_embeds=embeddings, **inputs).logits
-        clean_loss = training_loss(clean_logits, labels, weights, window_samples)
+        clean_loss = training_loss(clean_logits, labels, weights, window_samples, label_smoothing)
     gradient, = torch.autograd.grad(scaler.scale(clean_loss), embeddings, retain_graph=True)
     gradient = gradient.float() / scaler.get_scale()
     delta = fgsm_delta(gradient, batch["input_ids"], batch["attention_mask"], special_ids, epsilon)
@@ -207,7 +251,7 @@ def fgsm_backward(model, batch, labels, weights, window_samples, scaler,
     with torch.autocast(device_type=device_type, dtype=torch.float16, enabled=amp):
         adversarial = model.get_input_embeddings()(batch["input_ids"]) + delta
         adv_logits = model(inputs_embeds=adversarial, **inputs).logits
-        adv_loss = training_loss(adv_logits, labels, weights, window_samples)
+        adv_loss = training_loss(adv_logits, labels, weights, window_samples, label_smoothing)
     if not torch.isfinite(adv_loss):
         raise ValueError("Non-finite adversarial FGSM loss")
     scaler.scale(0.5 * adv_loss).backward()
@@ -275,6 +319,9 @@ def train(args):
     fgsm_epsilon = getattr(args, "fgsm_epsilon", 0.0)
     if not math.isfinite(fgsm_epsilon) or fgsm_epsilon < 0:
         raise ValueError("FGSM epsilon must be finite and nonnegative")
+    label_smoothing = getattr(args, "label_smoothing", 0.0)
+    if not math.isfinite(label_smoothing) or not 0 <= label_smoothing < 1:
+        raise ValueError("Label smoothing must be finite and in [0, 1)")
     layer_decay = getattr(args, "layer_lr_decay", 1.0)
     if not 0 < layer_decay <= 1:
         raise ValueError("Layer LR decay must be in (0, 1]")
@@ -291,9 +338,12 @@ def train(args):
         raise ValueError("Run/checkpoint directory already contains files; choose new paths")
     # Fail closed before touching CUDA, loading weights, or creating run directories.
     base_source = verify_base_model(args.base_model)
-    code_hashes = {name: file_sha256(ROOT / name) for name in
-                   ("main.py", "src/__init__.py", "src/training.py", "src/eda.py",
-                    "src/preprocessing.py", "src/model_source.py")}
+    init_from_path = getattr(args, "init_from", None)
+    code_files = ["main.py", "src/__init__.py", "src/training.py", "src/eda.py",
+                  "src/preprocessing.py", "src/model_source.py"]
+    if init_from_path is not None:
+        code_files.append("src/mlm.py")
+    code_hashes = {name: file_sha256(ROOT / name) for name in code_files}
     device = choose_device(args.device)
     amp = device.type == "cuda" and not args.no_amp
     random.seed(args.seed)
@@ -304,6 +354,15 @@ def train(args):
         torch.cuda.reset_peak_memory_stats()
     torch.backends.cudnn.benchmark = False
     train_rows, val_rows, manifest = load_split(args.data_dir, args.split)
+    init_from = None
+    if init_from_path is not None:  # guards run before any run/checkpoint directory is created
+        from .mlm import check_init_from
+        init_from = check_init_from(init_from_path, base_source, manifest, train_rows, val_rows, args.smoke,
+                                   allow_val_overlap=getattr(args, "allow_mlm_val_overlap", False))
+    exclude_path = getattr(args, "exclude_train_ids", None)
+    exclusion = None
+    if exclude_path is not None:
+        train_rows, exclusion = exclude_train_rows(train_rows, val_rows, exclude_path)
     if args.smoke:
         train_rows, val_rows = [smoke_subset(part, args.seed) for part in (train_rows, val_rows)]
     weights = class_weights(train_rows, args.class_weighting)
@@ -319,6 +378,9 @@ def train(args):
         trust_remote_code=False, num_labels=3,
         id2label=dict(enumerate(LABELS)), label2id={label: i for i, label in enumerate(LABELS)},
     ).to(device)
+    if init_from_path is not None:
+        from .mlm import load_encoder_from_mlm
+        load_encoder_from_mlm(model, init_from_path, tokenizer)
     if not args.no_gradient_checkpointing:
         model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
     train_batches = loader(train_rows, tokenizer, args.max_length, args.batch_size, True, args.seed, preprocessing=args.preprocessing)
@@ -344,7 +406,8 @@ def train(args):
               "eval_interval": eval_interval, "evaluation_batch_ends": list(eval_points),
               "evaluation_nominal_fractions": list(eval_points.values()),
               "optimizer_steps_planned": total_steps, "warmup_steps": int(total_steps * args.warmup_ratio),
-              "class_weighting": args.class_weighting,
+              "class_weighting": args.class_weighting, "label_smoothing": label_smoothing,
+              "exclude_train_ids": exclusion, "init_from": init_from,
               "fgsm": {"enabled": fgsm_epsilon > 0, "epsilon": fgsm_epsilon,
                        "norm": "linf", "space": "word_embeddings_before_position_and_token_type",
                        "special_token_ids": tokenizer.all_special_ids if fgsm_epsilon > 0 else [],
@@ -377,11 +440,12 @@ def train(args):
             window_samples = accumulation_sample_count(index, args.batch_size, args.accumulation_steps, len(train_rows))
             if fgsm_epsilon > 0:
                 loss = fgsm_backward(model, batch, labels, weights, window_samples, scaler,
-                                     fgsm_epsilon, tokenizer.all_special_ids, amp)
+                                     fgsm_epsilon, tokenizer.all_special_ids, amp,
+                                     label_smoothing=label_smoothing)
             else:
                 with torch.autocast(device_type=device.type, dtype=torch.float16, enabled=amp):
                     logits = model(**batch).logits
-                    loss = training_loss(logits, labels, weights, window_samples)
+                    loss = training_loss(logits, labels, weights, window_samples, label_smoothing)
                 if not torch.isfinite(loss):
                     raise ValueError("Non-finite training loss")
                 scaler.scale(loss).backward()

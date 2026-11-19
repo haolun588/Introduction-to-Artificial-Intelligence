@@ -279,7 +279,269 @@
         "submission_status": "not_submitted"
       },
       "kaggle_macro_f1": null,
-      "decision": "OOF 基準；步驟 3 以相同 5 折比較其他設定"
+      "decision": "步驟 2 OOF 基準；步驟 3b 後由 cv5_sqrt_ep5 取代為基準（差異不顯著）"
+    },
+    {
+      "id": "cv5_quarter",
+      "name": "五折 CV weighted_quarter",
+      "fold_dir": "outputs/cv5_seed42",
+      "folds": [
+        {
+          "fold": 0,
+          "split": "outputs/cv5_seed42/fold0.json",
+          "output": "outputs/cv5_quarter/fold0",
+          "checkpoint": "saved_models/cv5_quarter/fold0"
+        },
+        {
+          "fold": 1,
+          "split": "outputs/cv5_seed42/fold1.json",
+          "output": "outputs/cv5_quarter/fold1",
+          "checkpoint": "saved_models/cv5_quarter/fold1"
+        },
+        {
+          "fold": 2,
+          "split": "outputs/cv5_seed42/fold2.json",
+          "output": "outputs/cv5_quarter/fold2",
+          "checkpoint": "saved_models/cv5_quarter/fold2"
+        },
+        {
+          "fold": 3,
+          "split": "outputs/cv5_seed42/fold3.json",
+          "output": "outputs/cv5_quarter/fold3",
+          "checkpoint": "saved_models/cv5_quarter/fold3"
+        },
+        {
+          "fold": 4,
+          "split": "outputs/cv5_seed42/fold4.json",
+          "output": "outputs/cv5_quarter/fold4",
+          "checkpoint": "saved_models/cv5_quarter/fold4"
+        }
+      ],
+      "oof_output": "outputs/cv5_quarter_oof",
+      "report": "docs/reports/CV5_Quarter_Report.md",
+      "submission": {
+        "path": "outputs/cv5_quarter_oof/submissions/cv5_folds012_mean.csv",
+        "sha256": "a122c68fcaa8f56e87a22a42ecd6832f720c5281366ad173b7dd1f82ee79f496",
+        "submission_status": "not_submitted"
+      },
+      "kaggle_macro_f1": null,
+      "decision": "與 cv5_sqrt 配對比較：差異不顯著（95% 區間含 0），後續基準維持 sqrt",
+      "comparison": {
+        "path": "outputs/cv5_compare_sqrt_vs_quarter.json",
+        "a": "cv5_sqrt",
+        "b": "cv5_quarter"
+      }
+    },
+    {
+      "id": "cv5_sqrt_ep5",
+      "name": "五折 CV weighted_sqrt 5 epochs",
+      "fold_dir": "outputs/cv5_seed42",
+      "folds": [
+        {
+          "fold": 0,
+          "split": "outputs/cv5_seed42/fold0.json",
+          "output": "outputs/cv5_sqrt_ep5/fold0",
+          "checkpoint": "saved_models/cv5_sqrt_ep5/fold0"
+        },
+        {
+          "fold": 1,
+          "split": "outputs/cv5_seed42/fold1.json",
+          "output": "outputs/cv5_sqrt_ep5/fold1",
+          "checkpoint": "saved_models/cv5_sqrt_ep5/fold1"
+        },
+        {
+          "fold": 2,
+          "split": "outputs/cv5_seed42/fold2.json",
+          "output": "outputs/cv5_sqrt_ep5/fold2",
+          "checkpoint": "saved_models/cv5_sqrt_ep5/fold2"
+        },
+        {
+          "fold": 3,
+          "split": "outputs/cv5_seed42/fold3.json",
+          "output": "outputs/cv5_sqrt_ep5/fold3",
+          "checkpoint": "saved_models/cv5_sqrt_ep5/fold3"
+        },
+        {
+          "fold": 4,
+          "split": "outputs/cv5_seed42/fold4.json",
+          "output": "outputs/cv5_sqrt_ep5/fold4",
+          "checkpoint": "saved_models/cv5_sqrt_ep5/fold4"
+        }
+      ],
+      "oof_output": "outputs/cv5_sqrt_ep5_oof",
+      "report": "docs/reports/CV5_Sqrt_Ep5_Report.md",
+      "submission": {
+        "path": "outputs/cv5_sqrt_ep5_oof/submissions/cv5_folds012_mean.csv",
+        "sha256": "351963b9048f12b5c3fdc8c37d52e4db832361d83d257ebd32449afcb3d1d988",
+        "submission_status": "user_reported"
+      },
+      "kaggle_macro_f1": 0.8971,
+      "score_reported_on": "2026-11-16",
+      "score_provenance": "User reported in chat; not independently verified on Kaggle",
+      "decision": "與 cv5_sqrt 配對比較：差異不顯著（95% 區間含 0）；依預先規則取 OOF 較高者，成為後續基準",
+      "comparison": {
+        "path": "outputs/cv5_compare_sqrt_vs_sqrt_ep5.json",
+        "a": "cv5_sqrt",
+        "b": "cv5_sqrt_ep5"
+      }
+    },
+    {
+      "id": "cv5_sqrt_ep5_drop90",
+      "name": "五折 CV weighted_sqrt 5 epochs 排除 473 筆高信心不一致樣本",
+      "fold_dir": "outputs/cv5_seed42",
+      "folds": [
+        {
+          "fold": 0,
+          "split": "outputs/cv5_seed42/fold0.json",
+          "output": "outputs/cv5_sqrt_ep5_drop90/fold0",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_drop90/fold0"
+        },
+        {
+          "fold": 1,
+          "split": "outputs/cv5_seed42/fold1.json",
+          "output": "outputs/cv5_sqrt_ep5_drop90/fold1",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_drop90/fold1"
+        },
+        {
+          "fold": 2,
+          "split": "outputs/cv5_seed42/fold2.json",
+          "output": "outputs/cv5_sqrt_ep5_drop90/fold2",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_drop90/fold2"
+        },
+        {
+          "fold": 3,
+          "split": "outputs/cv5_seed42/fold3.json",
+          "output": "outputs/cv5_sqrt_ep5_drop90/fold3",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_drop90/fold3"
+        },
+        {
+          "fold": 4,
+          "split": "outputs/cv5_seed42/fold4.json",
+          "output": "outputs/cv5_sqrt_ep5_drop90/fold4",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_drop90/fold4"
+        }
+      ],
+      "oof_output": "outputs/cv5_sqrt_ep5_drop90_oof",
+      "report": "docs/reports/CV5_Drop90_Report.md",
+      "submission": {
+        "path": "outputs/cv5_sqrt_ep5_drop90_oof/submissions/cv5_folds012_mean.csv",
+        "sha256": "a112b5c89e62e39e072b9914d3641ae22d08021a1dc47676aa55338ab0c488d4",
+        "submission_status": "not_submitted"
+      },
+      "kaggle_macro_f1": null,
+      "decision": "與 cv5_sqrt_ep5 配對比較：OOF Δ +0.12 個百分點，95% 區間含 0，未達預先登記門檻 +0.5；不列候選、停止錯標排除方向、不提交 Kaggle",
+      "comparison": {
+        "path": "outputs/cv5_compare_ep5_vs_drop90.json",
+        "a": "cv5_sqrt_ep5",
+        "b": "cv5_sqrt_ep5_drop90"
+      }
+    },
+    {
+      "id": "cv5_sqrt_ep5_mlm10",
+      "name": "五折 CV weighted_sqrt 5 epochs 微調自各折 MLM 續訓 10 epochs 權重（僅用該折訓練子集文字）",
+      "fold_dir": "outputs/cv5_seed42",
+      "folds": [
+        {
+          "fold": 0,
+          "split": "outputs/cv5_seed42/fold0.json",
+          "output": "outputs/cv5_sqrt_ep5_mlm10/fold0",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_mlm10/fold0"
+        },
+        {
+          "fold": 1,
+          "split": "outputs/cv5_seed42/fold1.json",
+          "output": "outputs/cv5_sqrt_ep5_mlm10/fold1",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_mlm10/fold1"
+        },
+        {
+          "fold": 2,
+          "split": "outputs/cv5_seed42/fold2.json",
+          "output": "outputs/cv5_sqrt_ep5_mlm10/fold2",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_mlm10/fold2"
+        },
+        {
+          "fold": 3,
+          "split": "outputs/cv5_seed42/fold3.json",
+          "output": "outputs/cv5_sqrt_ep5_mlm10/fold3",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_mlm10/fold3"
+        },
+        {
+          "fold": 4,
+          "split": "outputs/cv5_seed42/fold4.json",
+          "output": "outputs/cv5_sqrt_ep5_mlm10/fold4",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_mlm10/fold4"
+        }
+      ],
+      "oof_output": "outputs/cv5_sqrt_ep5_mlm10_oof",
+      "report": "docs/reports/CV5_MLM10_Report.md",
+      "submission": {
+        "path": "outputs/cv5_sqrt_ep5_mlm10_oof/submissions/cv5_folds012_mean.csv",
+        "sha256": "ad1124f0a7cca3f9722c0627c652ec8f3084a9304c807c7cbc1ffadb5a890755",
+        "submission_status": "user_reported"
+      },
+      "kaggle_macro_f1": 0.9152,
+      "score_reported_on": "2026-11-17",
+      "score_provenance": "User reported in chat; not independently verified on Kaggle; attributed to mlm10 ensemble by upload timing (inferred)",
+      "decision": "與 cv5_sqrt_ep5 配對比較：OOF Δ +0.41 個百分點（95% 區間 [-0.21, +1.06] 含 0），未達預先登記門檻 +0.5；不列候選、不提交 Kaggle，待與使用者討論後續",
+      "comparison": {
+        "path": "outputs/cv5_compare_ep5_vs_mlm10.json",
+        "a": "cv5_sqrt_ep5",
+        "b": "cv5_sqrt_ep5_mlm10"
+      }
+    },
+    {
+      "id": "cv5_sqrt_ep5_mlmall30",
+      "name": "五折 CV weighted_sqrt 5 epochs 微調自共用 MLM 續訓 30 epochs 權重（續訓語料為全部 9,000 筆文字，非嚴格 OOF）",
+      "fold_dir": "outputs/cv5_seed42",
+      "folds": [
+        {
+          "fold": 0,
+          "split": "outputs/cv5_seed42/fold0.json",
+          "output": "outputs/cv5_sqrt_ep5_mlmall30/fold0",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_mlmall30/fold0"
+        },
+        {
+          "fold": 1,
+          "split": "outputs/cv5_seed42/fold1.json",
+          "output": "outputs/cv5_sqrt_ep5_mlmall30/fold1",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_mlmall30/fold1"
+        },
+        {
+          "fold": 2,
+          "split": "outputs/cv5_seed42/fold2.json",
+          "output": "outputs/cv5_sqrt_ep5_mlmall30/fold2",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_mlmall30/fold2"
+        },
+        {
+          "fold": 3,
+          "split": "outputs/cv5_seed42/fold3.json",
+          "output": "outputs/cv5_sqrt_ep5_mlmall30/fold3",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_mlmall30/fold3"
+        },
+        {
+          "fold": 4,
+          "split": "outputs/cv5_seed42/fold4.json",
+          "output": "outputs/cv5_sqrt_ep5_mlmall30/fold4",
+          "checkpoint": "saved_models/cv5_sqrt_ep5_mlmall30/fold4"
+        }
+      ],
+      "oof_output": "outputs/cv5_sqrt_ep5_mlmall30_oof",
+      "report": "docs/reports/CV5_MLMAll30_Report.md",
+      "submission": {
+        "path": "outputs/cv5_sqrt_ep5_mlmall30_oof/submissions/cv5_folds012_mean.csv",
+        "sha256": "80f97a038780e90d0df7123325bee8284fd27eb2f4e048cbfef2e1977622797c",
+        "submission_status": "user_reported"
+      },
+      "kaggle_macro_f1": 0.9142,
+      "score_reported_on": "2026-11-19",
+      "score_provenance": "User reported in chat 2026-11-19; not independently verified on Kaggle",
+      "decision": "預先登記判斷：Kaggle 0.9142 < 0.9152，主版本維持 cv5_sqrt_ep5_mlm10；不延伸此線。差距遠小於單次 Kaggle 雜訊，且一次改了語料範圍與 epoch 數兩個因素；待與使用者討論後續",
+      "comparison": {
+        "path": "outputs/cv5_compare_mlm10_vs_mlmall30.json",
+        "a": "cv5_sqrt_ep5_mlm10",
+        "b": "cv5_sqrt_ep5_mlmall30"
+      },
+      "notes": "non-strict OOF：MLM 續訓語料含各折驗證文字（不含標籤），OOF 偏樂觀，只作參考；判斷以 Kaggle 為主"
     }
   ]
 }

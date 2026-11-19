@@ -20,10 +20,10 @@
 ```text
 IAI_HW3/
   AGENTS.md                       工作前必讀規範與收尾檢核表
-  main.py                         inspect / eda / prepare / verify-base / train / predict / kfold
+  main.py                         inspect / eda / prepare / verify-base / train / predict / kfold / pretrain-mlm
   requirements.txt                作業指定的依賴入口，轉入 requirements/train.txt
   src/                            核心程式套件
-    training.py, eda.py, preprocessing.py
+    training.py, mlm.py, eda.py, preprocessing.py
     model_source.py               指定基底的固定雜湊與離線驗證
   tools/                          分析與維護工具
     analyze_ensemble.py, audit_emoji.py, audit_precision.py, cv_oof.py, refresh_experiments.py
@@ -114,13 +114,19 @@ python -m venv .venv
 
 固定切分位於 `outputs/eda/split.json`：seed 42、8,100／900 筆，按空白正規化文字分組並分層，保存 ID 與資料 SHA-256。後續訓練共用此切分；`train --seed` 只影響訓練。EDA 不相容的資料／參數會被拒絕覆寫，須指定新 `--output-dir`。訓練集長度 P50／P90／P95 = 31／40／43；`max_length=64` 截斷率約 0.02%，採批內動態 padding。
 
-預設訓練為 3 epochs、batch 2／累積 8、AdamW 2e-5、weight decay 0.01、10% warmup／linear decay、未加權 CE。CUDA 預設 FP16 AMP 與梯度檢查點；正式單模型推論為 FP32。兩個保留候選已完成 [跨精度檢查](docs/reports/Precision_Audit_Report.md)：驗證與 benchmark 標籤均一致，保留現行精度方式。已完成的加權對照使用 `--class-weighting sqrt-inverse`。
+預設訓練為 3 epochs、batch 2／累積 8、AdamW 2e-5、weight decay 0.01、10% warmup／linear decay、未加權 CE。CUDA 預設 FP16 AMP 與梯度檢查點；正式單模型推論為 FP32。兩個保留候選已完成 [跨精度檢查](docs/reports/Precision_Audit_Report.md)：驗證與 benchmark 標籤均一致，保留現行精度方式。已完成的加權對照使用 `--class-weighting sqrt-inverse`。`--label-smoothing ε`（預設 0.0，範圍 [0, 1)）只作用於訓練 loss：每筆樣本先算未加權的平滑 CE，再乘以真實類別權重；評估 loss 不變。`--exclude-train-ids 檔案`（每行一個 id 的 UTF-8 文字檔）只從訓練子集移除這些 id（類別權重依過濾後計算），驗證子集不變；重複 id 或不在資料集的 id 會中止，屬於驗證子集的 id 不移除但計數，紀錄寫入 run_config／training_config 的 `exclude_train_ids`（供 CV 每折共用同一份清單）。
+
+`pretrain-mlm` 子命令（`--split` 必填；`--output-dir`、`--checkpoint` 須為新路徑）以該 split 的訓練子集文字做 MLM 續訓（標準 80/10/10 遮罩，預設 10 epochs、lr 5e-5、mask 0.15、warmup 0.06、weight decay 0.01；前處理、tokenizer、max_length、batch／累積同 train），validation 文字只用來算固定遮罩的 MLM eval loss，不選模型、不用標籤與 benchmark，儲存最後一個 epoch 權重，並寫入 `mlm_config.json`（含 `mlm_text_ids`、來源與 hash）、`history.json`、`curves.png`、`summary.json`（完成標記，checkpoint 內另存副本 `mlm_summary.json`）。`train --init-from <MLM checkpoint>` 沿用其 embeddings／encoder 權重，pooler 與分類頭維持原流程（依 seed 新初始化分類頭）；若 base 來源或 dataset hash 不符、MLM 語料與本次驗證 id 有交集、非訓練 id 子集或 MLM 未完成，會在建立任何目錄前中止；紀錄寫入 `init_from`（未使用為 null）。講義未明文規定續訓是否屬於 base model，使用者已知悉並接受此風險。
 
 五折交叉驗證入口（切分、五折訓練與 OOF 評估；細節見 [CV 報告](docs/reports/CV5_Sqrt_Report.md)）：
 
 ```powershell
 .venv/Scripts/python.exe main.py kfold --k 5 --seed 42 --output-dir outputs/cv5_seed42
 bash tools/run_cv5_sqrt.sh   # 5 次訓練後呼叫 python -m tools.cv_oof 產生 OOF 與集成 CSV
+bash tools/run_cv5.sh <name> <none|sqrt-inverse|quarter-inverse> [epochs] [train 參數...]   # 通用版（epochs 可選，正整數，預設 3）；第 4 個起的參數原樣轉給 main.py train（例如 --label-smoothing 0.1，需明確給 epochs）；run_cv5_sqrt.sh 為其包裝
+bash tools/run_cv5_mlm.sh <name> <none|sqrt-inverse|quarter-inverse> <finetune_epochs> <mlm_epochs> [folds...]   # 每折先 pretrain-mlm 再 train --init-from；5 折皆完成才跑 OOF，只給部分 folds 會跳過 OOF
+bash tools/run_cv5_mlm_shared.sh <name> <none|sqrt-inverse|quarter-inverse> <finetune_epochs> <mlm_epochs>   # 以全部 9,000 筆文字續訓一次（pretrain-mlm --mlm-corpus all-dataset），5 折共用該 checkpoint 微調（train --allow-mlm-val-overlap，非嚴格 OOF）
+python -m tools.compare_oof --a outputs/cv5_sqrt_oof --b outputs/cv5_quarter_oof --output <新 json>   # 配對 bootstrap 比較兩份 OOF
 ```
 
 短跑使用每類各 16 筆、1 epoch；其 CSV 不作正式提交：

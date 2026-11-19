@@ -91,6 +91,52 @@ class TrainingTests(unittest.TestCase):
         plain = training_loss(actual, targets, None, len(targets))
         torch.testing.assert_close(plain, torch.nn.functional.cross_entropy(actual, targets))
 
+    def test_label_smoothing_zero_matches_legacy_loss_and_gradient(self):
+        torch.manual_seed(3)
+        targets = torch.tensor([0, 1, 2, 2, 0])
+        weights = torch.tensor([0.7, 1.5, 1.6])
+        for w in (weights, None):
+            a = torch.randn(5, 3, requires_grad=True)
+            b = a.detach().clone().requires_grad_(True)
+            legacy = torch.nn.functional.cross_entropy(a, targets, weight=w, reduction="sum") / 4
+            new = training_loss(b, targets, w, 4, 0.0)
+            self.assertTrue(torch.equal(legacy, new))
+            legacy.backward()
+            new.backward()
+            self.assertTrue(torch.equal(a.grad, b.grad))
+            self.assertTrue(torch.equal(new, training_loss(b, targets, w, 4)))
+
+    def test_label_smoothing_matches_formula_with_true_class_weights(self):
+        torch.manual_seed(5)
+        eps = 0.1
+        targets = torch.tensor([0, 1, 2, 2, 0])
+        weights = torch.tensor([0.7, 1.5, 1.6])
+        logits = torch.randn(5, 3)
+        nll = -logits.log_softmax(-1)
+        per = (1 - eps) * nll[torch.arange(5), targets] + eps * nll.mean(-1)
+        expected = (weights[targets] * per).sum() / 4
+        torch.testing.assert_close(training_loss(logits, targets, weights, 4, eps), expected)
+        torch.testing.assert_close(training_loss(logits, targets, None, 4, eps), per.sum() / 4)
+        # PyTorch's weight= plus label_smoothing= weights the smoothing term by target class; ours must not.
+        pytorch_combo = torch.nn.functional.cross_entropy(
+            logits, targets, weight=weights, reduction="sum", label_smoothing=eps) / 4
+        self.assertFalse(torch.allclose(training_loss(logits, targets, weights, 4, eps), pytorch_combo))
+
+    def test_label_smoothing_out_of_range_is_rejected(self):
+        for value in (-0.1, 1.0, 1.5, float("nan"), float("inf")):
+            with self.assertRaises(ValueError):
+                train(SimpleNamespace(label_smoothing=value))
+
+    def test_evaluation_loss_ignores_label_smoothing(self):
+        class Model(torch.nn.Module):
+            def forward(self, input_ids):
+                return SimpleNamespace(logits=torch.tensor([[2., 0., 0.], [0., 1., 0.]]))
+
+        batches = [{"input_ids": torch.zeros(2, 1, dtype=torch.long), "labels": torch.tensor([0, 2])}]
+        expected = torch.nn.functional.cross_entropy(
+            torch.tensor([[2., 0., 0.], [0., 1., 0.]]), torch.tensor([0, 2])).item()
+        self.assertAlmostEqual(evaluate(Model(), batches, torch.device("cpu"))["loss"], expected, places=6)
+
     def test_accumulation_matches_large_batch_with_partial_window(self):
         torch.manual_seed(7)
         inputs, targets = torch.randn(11, 4), torch.randn(11, 2)
