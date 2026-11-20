@@ -105,6 +105,20 @@
 - 合規：只用課程提供資料的訓練文字，不用 benchmark、不用 validation 文字續訓（`check_init_from` 嚴格檢查，不加 `--allow-mlm-val-overlap`）；講義 p.9「base model」續訓風險使用者已於 11/17 接受；若最終主版本為 MLM 版，依交件規則附說明文件與非 MLM 保險版 `weighted_quarter`。集成 3 個模型符合上限。
 - 尚未登錄：registry、實驗總表、報告均待有產物後再寫，屆時執行 `refresh_experiments.py`。
 
+### 方向 4 預先登記：mlm10 fold 重組（2026-11-21 預先登記，不訓練；已執行）
+
+- 狀態：已執行，已上傳 1 次，本方向停止（見下方「結果與判定」與[報告](reports/Fold_Recombine_Report.md)）。
+- 背景：目前最高 Kaggle 0.9152（mlm10 folds012）；同設定不同 seed 單模型 Kaggle 浮動約 0.6 個百分點（full8100 seeds 0.9021–0.9080），距離 0.92 的差距約 0.5 個百分點，與變異同量級。
+- 假設：5 折全部等權集成比 3 折更穩定，可能提升 Kaggle（推測，未驗證）。
+- 設定：只用既有 benchmark logits 離線重組（`outputs/cv5_sqrt_ep5_mlm10_oof/logits_benchmark_fold{0..4}.npz`），不訓練、不重新推論；方法與 `tools/cv_oof.py` 相同（FP32 softmax 等權平均、argmax），工具為 `tools/recombine_folds.py`。主要候選唯一一份：`cv5_folds01234_mean.csv`。另外產生全部 10 個 3 折組合與 5 個 4 折組合的 CSV **僅作診斷**（計算與 folds012 的預測不一致筆數及各類預測分布），診斷用 CSV 不上傳。
+- 為何不從 3 折組合中挑：沒有無洩漏的挑選依據（OOF 每筆只有一個 fold 預測，任何子集集成都無法做無洩漏的標籤評估）；依 validation 前 3 名即 folds012，已上傳；以 Kaggle 在 10 個組合中挑會變成對測試集調參。
+- 集成上限：本方向經使用者同意放寬原「集成上限 3」為 5 折（僅限此 CV 的 5 個 fold 模型）。
+- Kaggle 上傳（預先固定上限）：1 次，只上傳 `cv5_folds01234_mean.csv`。
+- 判定（預先固定）：Kaggle > 0.9152 → 成為新主版本；≤ 0.9152 → 維持 folds012，本方向停止，不再上傳其他組合。
+- 合規：同 mlm10（MLM 續訓的 base model 疑慮與交件規則沿用「順序 3 預先登記」那節）。
+- 驗收：工具重現 folds012 CSV 必須與既有 `cv5_folds012_mean.csv` 的 SHA-256 完全一致（`ad1124f0a7cca3f9722c0627c652ec8f3084a9304c807c7cbc1ffadb5a890755`）。
+- **結果與判定（2026-11-21）：** `cv5_folds01234_mean.csv` Kaggle Macro-F1 = **0.9137**（使用者回報，未經平台核驗），低於 folds012 的 0.9152（Δ −0.0015）。依預先登記判定 ≤ 0.9152：**主版本維持 folds012（0.9152），本方向停止，不再上傳其他組合。**
+
 ## 新研究路線（2026/11/16 起，取代原第三、四階段）
 
 > 註：步驟 3 後續（label smoothing／R-Drop）與步驟 4 已由上方「路線調整（2026-11-16，第二次）」取代；步驟 1、2、3a、3b 維持有效。
@@ -183,6 +197,8 @@
 | 2026/11/19（第二次） | 訓練加速等價性實測（speed_check）預先登記（訓練前寫下）。**目的**：量測加速設定的速度效益與數值等價性；不是為了提高分數，不產生交件候選。**新增程式**：`--eval-batch-size`（預設 None＝沿用 `--batch-size`，不指定時行為不變）與計時拆解（history 每列 `train_seconds`／`eval_seconds`；summary `total_train_seconds`、`total_eval_seconds`、`peak_allocated_mb`、`peak_reserved_mb`）。**共同設定**：seed 42、`--split outputs/eda/split.json`、`--class-weighting sqrt-inverse`、`--epochs 1`、不用 `--init-from`；輸出 `outputs/speed_check/<組別>`、checkpoint `saved_models/speed_check/<組別>`。**組別（每組只比上一組多一個變因）**：A 現行設定（對照，batch 2、累積 8、gradient checkpointing 開）；B = A + `--eval-batch-size 64`；C = B + `--no-gradient-checkpointing`；D = C + `--batch-size 8 --accumulation-steps 2`（等效 batch 16 不變）；E = C + `--batch-size 16 --accumulation-steps 1`（僅在 D 峰值 reserved VRAM < 3,000 MiB 時才跑）。MLM：M-A 現行 `pretrain-mlm` 1 epoch；M-C = M-A + `--no-gradient-checkpointing --eval-batch-size 64`；M-D = M-C + `--batch-size 8 --accumulation-steps 2`（同樣條件式：M-C 峰值 reserved < 3,000 MiB 才跑）。**假設**：B 的訓練過程與 A 位元相同，只有評估更快，驗證 macro-F1 差 ≤ 0.002；C 數值近乎相同（驗證 macro-F1 差 ≤ 0.005），訓練段加快 20～35%；D／E 因 dropout 亂數與 padding 不同而非等價，只記錄速度與分數差，不據單次 1 epoch 結果判定分數優劣。**決策資訊**：哪些設定可作為後續長時間訓練的預設；監控腳本的新速度門檻。**上限與停止條件**：全部合計 ≤ 60 分鐘 GPU 時間；任一組 OOM 或 reserved VRAM ≥ 3,900 MiB 即放棄該組及更大 batch 組。**注意**：MLM 的驗證遮罩在固定 RNG 下以評估 batch 物化，改 `--eval-batch-size` 會改變驗證遮罩，M-C 的 val MLM loss 與 M-A 不能逐位比較（只作量級參考）；`tools/cv_oof.py` 的 BATCH_SIZE=2 為 OOF 推論設定，未更動。 | 目前每個 CV 折訓練與 MLM 續訓耗時長，預先量測可安全套用的加速設定，以決定後續長時間訓練的預設 |
 | 2026/11/19（第二次） | 訓練加速等價性實測（speed_check）結果摘要（[報告](reports/Speed_Check_Report.md)）。**微調**：B（`--eval-batch-size 64`）、C（再加 `--no-gradient-checkpointing`）與 A 的權重 SHA-256 相同、驗證混淆矩陣相同（位元等價），1 epoch 由 467 秒降到 203 秒（約 2.3 倍），可作為後續微調預設；D／E（batch 8／16）約 3.6～4.3 倍但非等價，F1 差異在單次雜訊內，列為待登記的後續實驗。**MLM**：M-C 的 train MLM loss 與 M-A 相同、224.5 對 334.6 秒，但 peak reserved 4,166 MiB 超過停止條件 3,900 MiB（推測來自評估 batch 64 的詞表 logits，未驗證），M-D 跳過；MLM 可採用 `--no-gradient-checkpointing`，評估 batch 須改小並另測。監控腳本 `tools/gpu_watch.sh` 已依實測校正門檻。本輪不是訓練 run，未寫入 registry。 | 實測後確定長時間訓練的加速預設與監控門檻 |
 | 2026/11/19（第二次） | 預設值變更。**內容**：`train` 評估 batch 預設 64（`--eval-batch-size` 未指定時）；`train` 與 `pretrain-mlm` 的 gradient checkpointing 預設關閉（新增 `--gradient-checkpointing` 開啟，`--no-gradient-checkpointing` 保留相容）；`pretrain-mlm` 評估 batch 仍沿用 `--batch-size`。**依據**：[Speed_Check_Report](reports/Speed_Check_Report.md)。**舊指令重現性**：`train` 與舊設定位元等價（權重 SHA-256 相同），舊指令帶 `--no-gradient-checkpointing` 結果不變，未指定評估 batch 的舊指令只有評估更快；`pretrain-mlm` 只關閉 gradient checkpointing，train MLM loss 相同，評估 batch 未變所以 val MLM loss 可逐位比較。**未採用**：batch 8／16 非等價，待登記為後續實驗。 | 把已驗證的加速設定改為預設，減少每次手動帶參數 |
+| 2026/11/21 | 新增方向 4「mlm10 fold 重組」預先登記（見「方向 4 預先登記」，不訓練）：只用既有 benchmark logits 離線重組，主要候選 `cv5_folds01234_mean.csv`，Kaggle 上傳上限 1 次；經使用者同意，本方向將原「集成上限 3」放寬為 5 折（僅限 mlm10 CV 的 5 個 fold 模型） | 同設定 seed 間 Kaggle 浮動約 0.6 個百分點，與距 0.92 的差距同量級；5 折等權集成可能比 3 折更穩定（推測）；沒有無洩漏的挑選依據，故只登記單一主要候選，其餘組合僅作診斷 |
+| 2026/11/21 | 方向 4「mlm10 fold 重組」結果（[報告](reports/Fold_Recombine_Report.md)）：`tools/recombine_folds.py` 重現 folds012 CSV（SHA-256 `ad1124f0…0755` 一致，6 個測試 OK）；5 折版 `cv5_folds01234_mean.csv`（SHA-256 `6db6ece2…f7a7`）Kaggle 0.9137（使用者回報）< 0.9152 → 依預先登記，主版本維持 folds012，本方向停止。與 folds012 不一致 14/1000 筆（多為 neutral→negative），-0.0015 與 seed 間浮動同量級，無法區分是 5 折較差或雜訊（推測）。後處理分析，產物在 `outputs/cv5_sqrt_ep5_mlm10_recombine/`，依 AGENTS.md 第 5 節不寫入 registry | 預先登記規則：Kaggle ≤ 0.9152 → 維持 folds012 |
 
 ## 現況與保留版本
 
