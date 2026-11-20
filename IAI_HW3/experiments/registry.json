@@ -189,6 +189,72 @@
       "decision": "驗證與 Kaggle 均未超越既有首選；停止本輪 FGSM 搜尋，保留對照",
       "score_reported_on": "2026-11-16",
       "score_provenance": "User reported in chat; not independently verified on Kaggle"
+    },
+    {
+      "id": "full8100_mlm10_seed42",
+      "name": "固定切分 MLM 續訓 10 epochs / seed 42",
+      "kind": "single",
+      "output": "outputs/full8100_mlm10/seed42",
+      "checkpoints": [
+        "saved_models/full8100_mlm10/seed42"
+      ],
+      "predictions": "outputs/full8100_mlm10_ensemble_seed42-43-44/submissions/model0_benchmark_fp32.csv",
+      "report": "docs/reports/Full8100_MLM10_Report.md",
+      "kaggle_macro_f1": 0.9032,
+      "submission_status": "user_reported",
+      "score_reported_on": "2026-11-19",
+      "score_provenance": "User reported in chat 2026-11-19; not independently verified on Kaggle",
+      "decision": "非候選：Kaggle 低於 cv5_sqrt_ep5_mlm10（0.9152）；CSV 為 FP32 推論，此線停止，僅保留記錄"
+    },
+    {
+      "id": "full8100_mlm10_seed43",
+      "name": "固定切分 MLM 續訓 10 epochs / seed 43",
+      "kind": "single",
+      "output": "outputs/full8100_mlm10/seed43",
+      "checkpoints": [
+        "saved_models/full8100_mlm10/seed43"
+      ],
+      "predictions": "outputs/full8100_mlm10_ensemble_seed42-43-44/submissions/model1_benchmark_fp32.csv",
+      "report": "docs/reports/Full8100_MLM10_Report.md",
+      "kaggle_macro_f1": 0.908,
+      "submission_status": "user_reported",
+      "score_reported_on": "2026-11-20",
+      "score_provenance": "User reported 2026-11-20 (Kaggle screenshot for seeds 43/44 only); not independently verified on Kaggle",
+      "decision": "非候選：Kaggle 低於 cv5_sqrt_ep5_mlm10（0.9152）；CSV 為 FP32 推論，此線停止，僅保留記錄"
+    },
+    {
+      "id": "full8100_mlm10_seed44",
+      "name": "固定切分 MLM 續訓 10 epochs / seed 44",
+      "kind": "single",
+      "output": "outputs/full8100_mlm10/seed44",
+      "checkpoints": [
+        "saved_models/full8100_mlm10/seed44"
+      ],
+      "predictions": "outputs/full8100_mlm10_ensemble_seed42-43-44/submissions/model2_benchmark_fp32.csv",
+      "report": "docs/reports/Full8100_MLM10_Report.md",
+      "kaggle_macro_f1": 0.9021,
+      "submission_status": "user_reported",
+      "score_reported_on": "2026-11-20",
+      "score_provenance": "User reported 2026-11-20 (Kaggle screenshot for seeds 43/44 only); not independently verified on Kaggle",
+      "decision": "非候選：Kaggle 低於 cv5_sqrt_ep5_mlm10（0.9152）；CSV 為 FP32 推論，此線停止，僅保留記錄"
+    }
+  ],
+  "checkpoint_ensembles": [
+    {
+      "id": "full8100_mlm10_ensemble",
+      "name": "固定切分 MLM 續訓 10 epochs / 3 seed 等權集成",
+      "members": [
+        "full8100_mlm10_seed42",
+        "full8100_mlm10_seed43",
+        "full8100_mlm10_seed44"
+      ],
+      "output": "outputs/full8100_mlm10_ensemble_seed42-43-44",
+      "report": "docs/reports/Full8100_MLM10_Report.md",
+      "kaggle_macro_f1": 0.9079,
+      "submission_status": "user_reported",
+      "score_reported_on": "2026-11-19",
+      "score_provenance": "User reported in chat 2026-11-19; not independently verified on Kaggle",
+      "decision": "非候選：Kaggle 低於 cv5_sqrt_ep5_mlm10（0.9152），集成未優於最佳單模型；不作為交件候選"
     }
   ],
   "audits": [

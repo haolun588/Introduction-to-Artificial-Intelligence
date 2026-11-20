@@ -1,6 +1,6 @@
 # Kaggle 92% 改進計畫
 
-制定：2026/11/14；更新：2026/11/17（第二次路線調整）。Kaggle 目標 ≥0.9200，目前最高使用者回報 0.9152（cv5_sqrt_ep5_mlm10 集成；非 MLM 最高為 weighted_quarter 0.9122）。A、B、C1、C2 均已完成；FGSM 兩設定驗證均未改善，停止幅度搜尋。步驟 1（logit 偏移校正）、步驟 2（五折 CV）、步驟 3a（sqrt vs quarter CV 重比）、步驟 3b（訓練長度 3 → 5 epochs）已完成；步驟 3c（label smoothing）已中止並由第二次調整取代，順序 0（上傳集成 CSV）已由使用者回報 Kaggle 0.8971（見「路線調整（2026-11-16，第二次）」），下一步待定。順序 2 錯標抽查已通過（[報告](reports/Label_Noise_Audit_Report.md)），`cv5_sqrt_ep5_drop90` 已完成（[報告](reports/CV5_Drop90_Report.md)）：OOF 89.34%，Δ +0.12 個百分點，未達預先登記門檻 +0.5，順序 2 已停止；順序 3 MLM 續訓完成（OOF 89.63%，Δ +0.41，未達門檻；Kaggle 0.9152）。下一步：方向 2（cv5_sqrt_ep5_mlmall30）已完成（[報告](reports/CV5_MLMAll30_Report.md)），Kaggle 0.9142 < 0.9152，依預先登記主版本維持 mlm10（目前最高仍為 mlm10 0.9152）；方向 3（full8100_mlm10）已預先登記、未開工；下一步待與使用者討論。
+制定：2026/11/14；更新：2026/11/17（第二次路線調整）。Kaggle 目標 ≥0.9200，目前最高使用者回報 0.9152（cv5_sqrt_ep5_mlm10 集成；非 MLM 最高為 weighted_quarter 0.9122）。A、B、C1、C2 均已完成；FGSM 兩設定驗證均未改善，停止幅度搜尋。步驟 1（logit 偏移校正）、步驟 2（五折 CV）、步驟 3a（sqrt vs quarter CV 重比）、步驟 3b（訓練長度 3 → 5 epochs）已完成；步驟 3c（label smoothing）已中止並由第二次調整取代，順序 0（上傳集成 CSV）已由使用者回報 Kaggle 0.8971（見「路線調整（2026-11-16，第二次）」），下一步待定。順序 2 錯標抽查已通過（[報告](reports/Label_Noise_Audit_Report.md)），`cv5_sqrt_ep5_drop90` 已完成（[報告](reports/CV5_Drop90_Report.md)）：OOF 89.34%，Δ +0.12 個百分點，未達預先登記門檻 +0.5，順序 2 已停止；順序 3 MLM 續訓完成（OOF 89.63%，Δ +0.41，未達門檻；Kaggle 0.9152）。下一步：方向 2（cv5_sqrt_ep5_mlmall30）已完成（[報告](reports/CV5_MLMAll30_Report.md)），Kaggle 0.9142 < 0.9152，依預先登記主版本維持 mlm10（目前最高仍為 mlm10 0.9152）；方向 3（full8100_mlm10）已執行，Kaggle 4/4 已回報（單模型 0.9032／0.9080／0.9021、3 模型集成 0.9079），全部 ≤ 0.9152，依預先登記主版本維持 mlm10、此線停止（[報告](reports/Full8100_MLM10_Report.md)；目前最高仍為 mlm10 0.9152）；下一步待與使用者討論。
 
 ## 路線調整（2026-11-16，第二次）
 
@@ -89,9 +89,9 @@
 - 下一個具體動作：與使用者討論後續方向（不自行決定）。
 - 未 commit 的工作：git status 中所有 HW3 改動仍未 commit。
 
-### 方向 3 預先登記：full8100_mlm10（2026-11-19 草稿，未開工）
+### 方向 3 預先登記：full8100_mlm10（2026-11-19 預先登記；已執行）
 
-狀態：**已準備、未開工，等使用者指示開工。** 腳本 `tools/run_full_mlm.sh`、集成工具 `tools/ensemble_checkpoints.py` 與測試 `tests/test_ensemble_checkpoints.py` 已備妥，尚無任何訓練或推論產物。
+狀態：**已執行（2026-11-19）；Kaggle 4/4 已回報：0.9032／0.9080／0.9021、集成 0.9079；全部 ≤ 0.9152 → 主版本維持 mlm10，此線停止**（[報告](reports/Full8100_MLM10_Report.md)）。
 
 - 背景：`cv5_sqrt_ep5_mlm10`（Kaggle 0.9152，目前最高）為五折模型，每個只用約 7,200 筆訓練文字與標籤；順序 3 預先登記（`cv5_sqrt_ep5_mlm10`）已寫「最終交件模型只用原訓練子集 8,100 筆文字續訓」，此設定尚未做過。Kaggle 即成績；只換 seed Kaggle 曾差 1.7 個百分點；使用者同意方法用盡後可用 Kaggle 在已登錄候選間挑選。
 - 假設：同 mlm10 設定，訓練資料由約 7,200 增為 8,100，加上多 seed，可使至少一個候選 Kaggle ≥ 0.92（推測，未驗證）。

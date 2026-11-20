@@ -21,6 +21,9 @@
 | [分層學習率 / decay 0.9](../docs/reports/Layer_LR_Report.md) | 92.03% | 0.8989 | 21 | 驗證與 Kaggle 均未改善；保留對照，不擴大 decay 搜尋 |
 | [FGSM C1 / epsilon 0.00208093](../docs/reports/FGSM_Low_Report.md) | 91.73% | 0.8909 | 40 | 驗證與 Kaggle 回報均未改善；保留對照，未替換候選 |
 | [FGSM C2 / epsilon 0.00416186](../docs/reports/FGSM_High_Report.md) | 90.92% | 0.9038 | 40 | 驗證與 Kaggle 均未超越既有首選；停止本輪 FGSM 搜尋，保留對照 |
+| [固定切分 MLM 續訓 10 epochs / seed 42](../docs/reports/Full8100_MLM10_Report.md) | 91.54% | 0.9032 | 32 | 非候選：Kaggle 低於 cv5_sqrt_ep5_mlm10（0.9152）；CSV 為 FP32 推論，此線停止，僅保留記錄 |
+| [固定切分 MLM 續訓 10 epochs / seed 43](../docs/reports/Full8100_MLM10_Report.md) | 91.96% | 0.9080 | 43 | 非候選：Kaggle 低於 cv5_sqrt_ep5_mlm10（0.9152）；CSV 為 FP32 推論，此線停止，僅保留記錄 |
+| [固定切分 MLM 續訓 10 epochs / seed 44](../docs/reports/Full8100_MLM10_Report.md) | 91.41% | 0.9021 | 38 | 非候選：Kaggle 低於 cv5_sqrt_ep5_mlm10（0.9152）；CSV 為 FP32 推論，此線停止，僅保留記錄 |
 
 ## 模型與提交檔
 
@@ -43,6 +46,9 @@
 | `weighted_layer_lr` | `outputs/weighted_layer_lr/checkpoint` | [predictions.csv](../outputs/weighted_layer_lr/predictions.csv) | `47c39add40d1` |
 | `weighted_fgsm_low` | `outputs/weighted_fgsm_low/checkpoint` | [predictions.csv](../outputs/weighted_fgsm_low/predictions.csv) | `fe1d1640ccfb` |
 | `weighted_fgsm_high` | `outputs/weighted_fgsm_high/checkpoint` | [predictions.csv](../outputs/weighted_fgsm_high/predictions.csv) | `dd1fcd7f2396` |
+| `full8100_mlm10_seed42` | `saved_models/full8100_mlm10/seed42` | [predictions.csv](../outputs/full8100_mlm10_ensemble_seed42-43-44/submissions/model0_benchmark_fp32.csv) | `4f6b42a0f38f` |
+| `full8100_mlm10_seed43` | `saved_models/full8100_mlm10/seed43` | [predictions.csv](../outputs/full8100_mlm10_ensemble_seed42-43-44/submissions/model1_benchmark_fp32.csv) | `8cf85729e974` |
+| `full8100_mlm10_seed44` | `saved_models/full8100_mlm10/seed44` | [predictions.csv](../outputs/full8100_mlm10_ensemble_seed42-43-44/submissions/model2_benchmark_fp32.csv) | `689c684a6d40` |
 
 ## 推論稽核（不新增訓練候選）
 
@@ -54,6 +60,12 @@
 
 - [weighted_lr3e5 獨立封裝](../docs/reports/Package_Rehearsal_Report.md)：新 venv 安裝、乾淨解壓推論通過，1,000 筆與原 CSV 完全相同；此為演練，尚非最終交件。
 - [演練 ZIP](../outputs/package_rehearsal_20261115/build/HW3_rehearsal_weighted_lr3e5.zip)；SHA-256 前 12 碼 `6e7476cda021`。
+
+## 檢查點等權集成（固定切分；不列入上方單模型比較）
+
+| 集成 | 成員 | 驗證 Macro-F1 | Kaggle | 與 Kaggle 候選不同筆數 | CSV | CSV SHA-256（前 12 碼） |
+|---|---|---:|---:|---:|---|---|
+| [固定切分 MLM 續訓 10 epochs / 3 seed 等權集成](../docs/reports/Full8100_MLM10_Report.md) | `full8100_mlm10_seed42`<br>`full8100_mlm10_seed43`<br>`full8100_mlm10_seed44` | 91.93% | 0.9079 | 34 | [ensemble_mean_benchmark_fp32.csv](../outputs/full8100_mlm10_ensemble_seed42-43-44/submissions/ensemble_mean_benchmark_fp32.csv) | `88d7616bddae` |
 
 ## 方法校準（不列入正式候選）
 

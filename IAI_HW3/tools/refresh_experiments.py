@@ -59,6 +59,20 @@ def check_metrics(result, expected_count):
             "Macro-F1 does not match confusion matrix")
 
 
+def check_init_from(config):
+    """Runs fine-tuned from an MLM checkpoint: the checkpoint must still exist unchanged."""
+    init_from = config.get("init_from")
+    if not init_from:
+        return
+    mlm_dir = Path(init_from["path"])
+    mlm_rel = mlm_dir.relative_to(ROOT).as_posix() if mlm_dir.is_absolute() else mlm_dir.as_posix()
+    require(local_path(f"{mlm_rel}/mlm_summary.json").is_file()
+            and local_path(f"{mlm_rel}/model.safetensors").is_file(),
+            f"Missing MLM init checkpoint files: {mlm_rel}")
+    require(digest(f"{mlm_rel}/model.safetensors") == init_from["model_sha256"],
+            f"MLM init checkpoint hash differs: {mlm_rel}")
+
+
 def collect_cross_validations(registry, dataset_hash, benchmark_ids):
     """Audit registered k-fold CV groups (fold models, OOF metrics, ensemble CSV); files only, no inference."""
     entries = registry.get("cross_validations", [])
@@ -106,15 +120,7 @@ def collect_cross_validations(registry, dataset_hash, benchmark_ids):
                     and config["train_ids"] == [i for i in train_ids if i not in set(excluded)]
                     and config["validation_ids"] == val_ids,
                     f"Split IDs differ from fold file: {checkpoint}")
-            init_from = config.get("init_from")
-            if init_from:  # runs fine-tuned from an MLM checkpoint: the checkpoint must still exist unchanged
-                mlm_dir = Path(init_from["path"])
-                mlm_rel = mlm_dir.relative_to(ROOT).as_posix() if mlm_dir.is_absolute() else mlm_dir.as_posix()
-                require(local_path(f"{mlm_rel}/mlm_summary.json").is_file()
-                        and local_path(f"{mlm_rel}/model.safetensors").is_file(),
-                        f"Missing MLM init checkpoint files: {mlm_rel}")
-                require(digest(f"{mlm_rel}/model.safetensors") == init_from["model_sha256"],
-                        f"MLM init checkpoint hash differs: {mlm_rel}")
+            check_init_from(config)
             check_metrics(config["validation"], len(val_ids))
             model = read_json(f"{checkpoint}/config.json")
             require(model["id2label"] == {str(i): label for i, label in enumerate(LABELS)},
@@ -183,6 +189,57 @@ def collect_cross_validations(registry, dataset_hash, benchmark_ids):
                           ci_high=boot["delta_p97_5"], fraction_delta_le_0=boot["fraction_delta_le_0"],
                           resamples=boot["resamples"], bootstrap_seed=boot["seed"],
                           b_wins_folds=report["per_fold"]["b_wins"], disagreement=report["disagreement"])
+    return results
+
+
+def collect_checkpoint_ensembles(registry, runs, configs, split_hash, benchmark_ids, predictions):
+    """Audit equal-weight ensembles written by tools/ensemble_checkpoints.py (members are registered single runs)."""
+    entries = registry.get("checkpoint_ensembles", [])
+    ids = [entry["id"] for entry in entries]
+    require(len(ids) == len(set(ids)), "Duplicate checkpoint-ensemble IDs")
+    by_id = {run["id"]: run for run in runs}
+    results = []
+    for entry in entries:
+        name = entry["id"]
+        require(local_path(entry["report"]).is_file(), f"Missing ensemble report: {name}")
+        score = entry["kaggle_macro_f1"]
+        require(score is None or 0 <= score <= 1, f"Invalid Kaggle score: {name}")
+        members = entry["members"]
+        require(1 <= len(members) <= 3 and len(set(members)) == len(members), f"Ensemble exceeds 3 models: {name}")
+        require(all(m in by_id and by_id[m]["kind"] == "single" for m in members), f"Unknown ensemble member: {name}")
+        summary_path = f"{entry['output']}/summary.json"
+        summary = read_json(summary_path)
+        require(summary["split_sha256"] == split_hash and summary["labels"] == LABELS
+                and summary["benchmark_rows"] == len(benchmark_ids), f"Ensemble provenance mismatch: {name}")
+        require(len(summary["models"]) == len(members), f"Ensemble size mismatch: {name}")
+        for member, saved in zip(members, summary["models"]):
+            run = by_id[member]
+            checkpoint = run["checkpoints"][0]
+            require(saved["checkpoint"].replace("\\", "/") == checkpoint, f"Ensemble checkpoint differs: {name}/{member}")
+            require(configs[checkpoint]["split_sha256"] == summary["split_sha256"], f"Member split differs: {name}/{member}")
+            require(math.isclose(saved["validation_macro_f1"], run["validation"]["macro_f1"], abs_tol=1e-12),
+                    f"Member validation Macro-F1 differs: {name}/{member}")
+            csv_path = saved["benchmark_csv"].replace("\\", "/")
+            require(csv_path == run["predictions"] and digest(csv_path) == saved["benchmark_csv_sha256"]
+                    == run["predictions_sha256"], f"Member CSV differs: {name}/{member}")
+        result = summary["ensemble"]
+        require(result["n_models"] == len(members), f"Ensemble member count differs: {name}")
+        check_metrics({"confusion_matrix": result["validation_confusion_matrix"],
+                       "macro_f1": result["validation_macro_f1"]}, summary["validation_rows"])
+        submission = result["benchmark_csv"].replace("\\", "/")
+        rows = read_csv(submission, ["id", "pred"])
+        require([r["id"] for r in rows] == benchmark_ids and all(r["pred"] in LABELS for r in rows),
+                f"Ensemble CSV IDs/labels differ: {name}")
+        require(digest(submission) == result["benchmark_csv_sha256"], f"Ensemble CSV hash differs: {name}")
+        candidate = predictions[registry["kaggle_candidate"]]
+        results.append({**entry, "method": result["method"], "validation_macro_f1": result["validation_macro_f1"],
+                        "validation_classes": result["validation_classes"],
+                        "validation_confusion_matrix": result["validation_confusion_matrix"],
+                        "csv": submission, "csv_sha256": result["benchmark_csv_sha256"], "csv_rows": len(rows),
+                        "member_csv_sha256": {m: by_id[m]["predictions_sha256"] for m in members},
+                        "summary_sha256": digest(summary_path),
+                        "different_predictions_from_kaggle_candidate": sum(
+                            r["pred"] != c for r, c in zip(rows, candidate))})
     return results
 
 
@@ -265,6 +322,7 @@ def collect():
             require(summary["best_epoch"] == config["best_epoch"] and
                     math.isclose(summary["best_validation_macro_f1"], result["macro_f1"], abs_tol=1e-12),
                     f"Best checkpoint metadata differs: {entry['id']}")
+            check_init_from(config)
             source_hashes[f"{output}/run_config.json"] = digest(f"{output}/run_config.json")
             if "eval_interval" in run_config:
                 history = read_json(f"{output}/history.json")
@@ -309,7 +367,7 @@ def collect():
                         f"Ensemble member differs: {entry['id']} / {name}")
             result = summary["metrics"]["soft_voting"]
         check_metrics(result, validation_count)
-        prediction_path = f"{output}/predictions.csv"
+        prediction_path = entry.get("predictions", f"{output}/predictions.csv")
         rows = read_csv(prediction_path, ["id", "pred"])
         require([row["id"] for row in rows] == benchmark_ids, f"Benchmark ID order differs: {entry['id']}")
         require(all(row["pred"] in LABELS for row in rows), f"Invalid predicted label: {entry['id']}")
@@ -421,6 +479,7 @@ def collect():
                     relative = path.relative_to(ROOT).as_posix()
                     evidence[relative] = digest(relative)
         calibrations.append({**entry, "results": result, "evidence_sha256": evidence})
+    checkpoint_ensembles = collect_checkpoint_ensembles(registry, runs, configs, split_hash, benchmark_ids, predictions)
     cross_validations = collect_cross_validations(registry, dataset_hash, benchmark_ids)
     code = ["main.py", "src/__init__.py", "src/training.py", "src/eda.py", "src/preprocessing.py",
             "src/model_source.py", "src/mlm.py", "tools/__init__.py", "tools/analyze_ensemble.py", "tools/audit_emoji.py",
@@ -436,7 +495,7 @@ def collect():
             "current_code_sha256": {name: digest(name) for name in code},
             "checkpoints": checkpoint_info, "runs": runs, "audits": audits, "package_rehearsals": packages,
             "confirmation_splits": confirmation_splits, "calibrations": calibrations,
-            "cross_validations": cross_validations}
+            "cross_validations": cross_validations, "checkpoint_ensembles": checkpoint_ensembles}
 
 
 def render(snapshot):
@@ -471,6 +530,16 @@ def render(snapshot):
             lines.append(f"- [{package['run_id']} 獨立封裝](../{package['report']})：新 venv 安裝、乾淨解壓推論通過，"
                          "1,000 筆與原 CSV 完全相同；此為演練，尚非最終交件。")
             lines.append(f"- [演練 ZIP](../{result['archive']})；SHA-256 前 12 碼 `{result['archive_sha256'][:12]}`。")
+    if snapshot.get("checkpoint_ensembles"):
+        lines += ["", "## 檢查點等權集成（固定切分；不列入上方單模型比較）", "",
+                  "| 集成 | 成員 | 驗證 Macro-F1 | Kaggle | 與 Kaggle 候選不同筆數 | CSV | CSV SHA-256（前 12 碼） |",
+                  "|---|---|---:|---:|---:|---|---|"]
+        for ens in snapshot["checkpoint_ensembles"]:
+            score = "待回報" if ens["kaggle_macro_f1"] is None else f"{ens['kaggle_macro_f1']:.4f}"
+            members = "<br>".join(f"`{m}`" for m in ens["members"])
+            lines.append(f"| [{ens['name']}](../{ens['report']}) | {members} | {ens['validation_macro_f1']:.2%} | {score} | "
+                         f"{ens['different_predictions_from_kaggle_candidate']} | [{ens['csv'].rsplit('/', 1)[-1]}](../{ens['csv']}) | "
+                         f"`{ens['csv_sha256'][:12]}` |")
     if snapshot["calibrations"]:
         lines += ["", "## 方法校準（不列入正式候選）", ""]
         for entry in snapshot["calibrations"]:
@@ -521,6 +590,8 @@ def main():
         print(f"Verified {len(snapshot['runs'])} runs, {len(snapshot['checkpoints'])} checkpoints, and all prediction CSVs.")
         if snapshot["cross_validations"]:
             print(f"Verified {len(snapshot['cross_validations'])} cross-validation group(s).")
+        if snapshot["checkpoint_ensembles"]:
+            print(f"Verified {len(snapshot['checkpoint_ensembles'])} checkpoint ensemble(s).")
         print("Index is current." if args.check else f"Updated {SNAPSHOT} and {REPORT}.")
     except (OSError, ValueError, KeyError, TypeError) as exc:
         parser.exit(1, f"Audit failed: {exc}\n")
